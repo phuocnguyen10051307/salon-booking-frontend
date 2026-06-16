@@ -3,14 +3,17 @@ import 'package:provider/provider.dart';
 
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/provider/auth_provider.dart';
+import 'features/store/provider/service_provider.dart';
 import 'package:dio/dio.dart';
+
+import 'package:flutter/foundation.dart';
 
 Future<void> testConnection() async {
   print('=== START TEST ===');
 
   final dio = Dio(
     BaseOptions(
-      baseUrl: 'http://10.0.2.2:3000',
+      baseUrl: kIsWeb ? 'http://localhost:3000' : 'http://10.0.2.2:3000',
       connectTimeout: const Duration(seconds: 5),
       receiveTimeout: const Duration(seconds: 5),
     ),
@@ -37,11 +40,15 @@ Future<void> testConnection() async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await testConnection();
+  // testConnection() chạy ngầm, không await để tránh lỗi màn hình đen (ANR) do block UI
+  // testConnection();
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AuthProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ServiceProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -125,7 +132,7 @@ class _MyHomePageState extends State<MyHomePage> {
           // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
           // action in the IDE, or press "p" in the console), to see the
           // wireframe for each widget.
-          mainAxisAlignment: .center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text('You have pushed the button this many times:'),
             Text(
