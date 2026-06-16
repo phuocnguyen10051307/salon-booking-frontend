@@ -31,6 +31,23 @@ class AuthService {
     );
   }
 
+  Future<Response> verifySignupOtp({
+    required String email,
+    required String otp,
+  }) async {
+    return await ApiClient.dio.post(
+      ApiConstants.verifySignupOtp,
+      data: {'email': email, 'otp': otp},
+    );
+  }
+
+  Future<Response> resendSignupOtp({required String email}) async {
+    return await ApiClient.dio.post(
+      ApiConstants.resendSignupOtp,
+      data: {'email': email},
+    );
+  }
+
   Future<Response> getCurrentUser({required String token}) async {
     return await ApiClient.dio.get(
       ApiConstants.me,

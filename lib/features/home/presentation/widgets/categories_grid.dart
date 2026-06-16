@@ -14,7 +14,7 @@ class CategoriesGrid extends StatelessWidget {
       'Nails',
       'Facial',
       'Coloring',
-      'Spa',
+      'Hair Care',
       'Waxing',
       'Makeup',
       'Massage',

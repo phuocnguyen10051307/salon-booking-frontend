@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../store/presentation/store_list_screen.dart';
+
 class MostSearchInterest extends StatelessWidget {
   const MostSearchInterest({Key? key}) : super(key: key);
 
@@ -13,9 +15,18 @@ class MostSearchInterest extends StatelessWidget {
       'Facial',
       'Nails',
       'Coloring',
-      'Spa',
+      'Hair Care',
       'Makeup',
       'Massage',
+    ];
+    final icons = [
+      Icons.content_cut,
+      Icons.spa,
+      Icons.brush,
+      Icons.color_lens,
+      Icons.hot_tub,
+      Icons.face,
+      Icons.self_improvement,
     ];
 
     return SizedBox(
@@ -24,18 +35,29 @@ class MostSearchInterest extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: lightTeal,
+        itemBuilder: (context, index) => Material(
+          color: lightTeal,
+          borderRadius: BorderRadius.circular(24),
+          child: InkWell(
             borderRadius: BorderRadius.circular(24),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.local_offer, color: darkTeal, size: 18),
-              const SizedBox(width: 8),
-              Text(items[index], style: GoogleFonts.poppins(color: darkTeal)),
-            ],
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => StoreListScreen(categoryName: items[index]),
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Icon(icons[index], color: darkTeal, size: 18),
+                  const SizedBox(width: 8),
+                  Text(items[index], style: GoogleFonts.poppins(color: darkTeal)),
+                ],
+              ),
+            ),
           ),
         ),
       ),

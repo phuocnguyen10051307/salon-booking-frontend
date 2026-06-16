@@ -23,7 +23,7 @@ class HomeBottomNav extends StatelessWidget {
           _navItem(Icons.calendar_today, 2),
           Stack(
             children: [
-              _navItem(Icons.mail_outline, 3),
+              _navItem(Icons.shopping_bag_outlined, 3),
               Positioned(
                 right: -6,
                 top: -6,

@@ -6,8 +6,9 @@ class ServiceApi {
   Future<List<ServiceModel>> getServices() async {
     try {
       final response = await ApiClient.dio.get(ApiConstants.services);
-      if (response.data['services'] != null) {
-        final List<dynamic> servicesData = response.data['services'];
+      final services = response.data['data']?['services'] ?? response.data['services'];
+      if (services != null) {
+        final List<dynamic> servicesData = services;
         return servicesData.map((json) => ServiceModel.fromJson(json)).toList();
       }
       return [];

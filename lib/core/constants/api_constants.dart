@@ -5,6 +5,8 @@ class ApiConstants {
 
   static const String login = '/auth/signin';
   static const String signup = '/auth/signup';
+  static const String verifySignupOtp = '/auth/verify-signup-otp';
+  static const String resendSignupOtp = '/auth/resend-signup-otp';
   static const String me = '/auth/me';
   static const String signout = '/auth/signout';
   static const String services = '/services';

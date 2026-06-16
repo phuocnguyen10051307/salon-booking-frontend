@@ -6,6 +6,7 @@ class ServiceModel {
   final String? description;
   final String? imageUrl;
   final String? categoryId;
+  final String? categoryName;
 
   ServiceModel({
     required this.id,
@@ -15,9 +16,11 @@ class ServiceModel {
     this.description,
     this.imageUrl,
     this.categoryId,
+    this.categoryName,
   });
 
   factory ServiceModel.fromJson(Map<String, dynamic> json) {
+    final category = json['categories'];
     return ServiceModel(
       id: json['service_id']?.toString() ?? '',
       name: json['service_name'] ?? '',
@@ -26,6 +29,7 @@ class ServiceModel {
       description: json['description'],
       imageUrl: json['image_url'],
       categoryId: json['category_id'],
+      categoryName: category is Map<String, dynamic> ? category['category_name'] : null,
     );
   }
 
@@ -37,5 +41,6 @@ class ServiceModel {
     'description': description,
     'image_url': imageUrl,
     'category_id': categoryId,
+    'category_name': categoryName,
   };
 }

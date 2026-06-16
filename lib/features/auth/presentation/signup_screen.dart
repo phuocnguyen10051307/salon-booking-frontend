@@ -5,6 +5,7 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../provider/auth_provider.dart';
+import 'email_verification_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -126,10 +127,18 @@ class _SignupScreenState extends State<SignupScreen> {
                   if (!mounted) return;
 
                   if (success) {
-                    _showMessage('Đăng ký thành công. Vui lòng đăng nhập.');
+                    _showMessage('Đăng ký thành công. Vui lòng kiểm tra email.');
                     await Future.delayed(const Duration(milliseconds: 500));
                     if (!mounted) return;
-                    Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EmailVerificationScreen(
+                          email: email,
+                          isSignupVerification: true,
+                        ),
+                      ),
+                    );
                   } else {
                     _showMessage('Đăng ký thất bại. Vui lòng thử lại.');
                   }

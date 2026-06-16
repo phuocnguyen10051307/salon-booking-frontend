@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/provider/auth_provider.dart';
+import 'features/home/presentation/home_screen.dart';
 import 'features/store/provider/service_provider.dart';
 import 'package:dio/dio.dart';
 
@@ -60,7 +61,48 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
-      home: const LoginScreen(),
+      home: const SplashScreen(),
+    );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuth();
+    });
+  }
+
+  Future<void> _checkAuth() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isLoggedIn = await authProvider.loadCurrentUser();
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => isLoggedIn ? const HomeScreen() : const LoginScreen(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
     );
   }
 }
