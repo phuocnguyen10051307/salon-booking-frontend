@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../store/provider/cart_provider.dart';
 
 class HomeBottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int>? onTap;
 
-  const HomeBottomNav({Key? key, this.selectedIndex = 0, this.onTap})
-    : super(key: key);
+  const HomeBottomNav({super.key, this.selectedIndex = 0, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -21,22 +23,14 @@ class HomeBottomNav extends StatelessWidget {
           _navItem(Icons.home, 0),
           _navItem(Icons.explore, 1),
           _navItem(Icons.calendar_today, 2),
-          Stack(
-            children: [
-              _navItem(Icons.shopping_bag_outlined, 3),
-              Positioned(
-                right: -6,
-                top: -6,
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: Colors.orange,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ],
+          Consumer<CartProvider>(
+            builder: (context, provider, child) {
+              return Badge(
+                isLabelVisible: provider.itemCount > 0,
+                label: Text(provider.itemCount.toString()),
+                child: _navItem(Icons.shopping_bag_outlined, 3),
+              );
+            },
           ),
           _navItem(Icons.person_outline, 4),
         ],

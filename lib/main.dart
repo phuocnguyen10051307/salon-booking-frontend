@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/provider/auth_provider.dart';
 import 'features/home/presentation/home_screen.dart';
+import 'features/store/provider/cart_provider.dart';
 import 'features/store/provider/service_provider.dart';
 import 'package:dio/dio.dart';
 
@@ -38,6 +39,7 @@ Future<void> testConnection() async {
 
   print('=== END TEST ===');
 }
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -49,20 +51,19 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: const MyApp(),
     ),
   );
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      home: const SplashScreen(),
-    );
+    return MaterialApp(title: 'Flutter Demo', home: const SplashScreen());
   }
 }
 
@@ -100,9 +101,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return const Scaffold(
       backgroundColor: Colors.white,
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }
