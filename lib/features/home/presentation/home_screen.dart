@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../auth/presentation/login_screen.dart';
 import '../../auth/provider/auth_provider.dart';
+import '../../store/presentation/cart_screen.dart';
+import '../../store/provider/cart_provider.dart';
 import 'widgets/header.dart';
 import 'widgets/promo_banner.dart';
 import 'widgets/categories_grid.dart';
@@ -12,7 +14,7 @@ import 'widgets/nearby_offers.dart';
 import 'widgets/bottom_nav.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -27,10 +29,19 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       authProvider.loadCurrentUser();
+      context.read<CartProvider>().fetchCart();
     });
   }
 
   void _onNavTap(int index) {
+    if (index == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CartScreen()),
+      );
+      return;
+    }
+
     setState(() {
       _selectedIndex = index;
     });
