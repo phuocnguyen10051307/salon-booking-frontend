@@ -1,9 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../data/cart_api.dart';
 import '../data/models/billing_model.dart';
 import '../data/models/booking_model.dart';
 import '../data/models/cart_item_model.dart';
+import '../data/models/stylist_model.dart';
 
 class CartProvider extends ChangeNotifier {
   final CartApi _cartApi = CartApi();
@@ -11,12 +13,16 @@ class CartProvider extends ChangeNotifier {
   CartModel _cart = CartModel.empty();
   BookingModel? _latestBooking;
   BillingModel? _latestBilling;
+  List<BillingModel> _billings = const [];
+  List<StylistModel> _stylists = const [];
   bool _isLoading = false;
   String? _error;
 
   CartModel get cart => _cart;
   BookingModel? get latestBooking => _latestBooking;
   BillingModel? get latestBilling => _latestBilling;
+  List<BillingModel> get billings => _billings;
+  List<StylistModel> get stylists => _stylists;
   bool get isLoading => _isLoading;
   String? get error => _error;
   int get itemCount => _cart.itemCount;
@@ -24,6 +30,24 @@ class CartProvider extends ChangeNotifier {
   Future<void> fetchCart() async {
     await _run(() async {
       _cart = await _cartApi.getCart();
+    });
+  }
+
+  Future<void> fetchBillings() async {
+    await _run(() async {
+      _billings = await _cartApi.getBillings();
+    });
+  }
+
+  Future<void> fetchStylistsForServices(List<String> serviceIds) async {
+    await _run(() async {
+      final stylists = await _cartApi.getStylists();
+      final activeStylists = stylists.where((stylist) => stylist.isActive).toList();
+      final matchingStylists = activeStylists.where((stylist) {
+        return serviceIds.every((serviceId) => stylist.serviceIds.contains(serviceId));
+      }).toList();
+
+      _stylists = matchingStylists.isNotEmpty ? matchingStylists : activeStylists;
     });
   }
 
@@ -60,34 +84,48 @@ class CartProvider extends ChangeNotifier {
     required DateTime bookingDate,
     required String bookingTime,
     required String paymentMethod,
+    String? stylistId,
+    List<String> selectedItemIds = const [],
     String? note,
   }) async {
     final success = await _run(() async {
-      _latestBooking = await _cartApi.createBooking(
+      final result = await _cartApi.checkout(
         bookingDate: bookingDate,
         bookingTime: bookingTime,
+        paymentMethod: paymentMethod,
+        stylistId: stylistId,
+        selectedItemIds: selectedItemIds,
         note: note,
       );
-      _latestBilling = await _cartApi.createBilling(
-        bookingId: _latestBooking!.id,
-        paymentMethod: paymentMethod,
-      );
-      _cart = CartModel.empty();
+      _latestBooking = result.booking;
+      _latestBilling = result.billing;
+      _cart = await _cartApi.getCart();
+      _billings = await _cartApi.getBillings();
     });
     return success ? _latestBilling : null;
   }
 
-  Future<BillingModel?> payLatestBilling(String paymentMethod) async {
-    final billingId = _latestBilling?.id;
-    if (billingId == null || billingId.isEmpty) return null;
-
+  Future<BillingModel?> payBilling({required String billingId, required String paymentMethod}) async {
     final success = await _run(() async {
       _latestBilling = await _cartApi.payBilling(
         billingId: billingId,
         paymentMethod: paymentMethod,
       );
+      _billings = await _cartApi.getBillings();
     });
     return success ? _latestBilling : null;
+  }
+
+  String _readErrorMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map<String, dynamic>) {
+        final message = data['message'] ?? data['error'];
+        if (message != null) return message.toString();
+      }
+      return error.message ?? 'Request failed';
+    }
+    return error.toString();
   }
 
   Future<bool> _run(Future<void> Function() action) async {
@@ -99,7 +137,7 @@ class CartProvider extends ChangeNotifier {
       await action();
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = _readErrorMessage(e);
       return false;
     } finally {
       _isLoading = false;
@@ -107,3 +145,4 @@ class CartProvider extends ChangeNotifier {
     }
   }
 }
+

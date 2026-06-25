@@ -7,12 +7,14 @@ class ServiceModel {
   final String? imageUrl;
   final String? categoryId;
   final String? categoryName;
+  final bool isActive;
 
   ServiceModel({
     required this.id,
     required this.name,
     required this.price,
     required this.durationMinutes,
+    required this.isActive,
     this.description,
     this.imageUrl,
     this.categoryId,
@@ -30,6 +32,7 @@ class ServiceModel {
       imageUrl: json['image_url'],
       categoryId: json['category_id'],
       categoryName: category is Map<String, dynamic> ? category['category_name'] : null,
+      isActive: json['is_active'] as bool? ?? true,
     );
   }
 
@@ -42,5 +45,6 @@ class ServiceModel {
     'image_url': imageUrl,
     'category_id': categoryId,
     'category_name': categoryName,
+    'is_active': isActive,
   };
 }

@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../home/presentation/home_screen.dart';
 import '../data/models/service_model.dart';
+import '../data/service_api.dart';
 import '../provider/cart_provider.dart';
 import 'cart_screen.dart';
 
@@ -17,28 +19,69 @@ class StoreDetailScreen extends StatefulWidget {
 }
 
 class _StoreDetailScreenState extends State<StoreDetailScreen> {
+  final ServiceApi _serviceApi = ServiceApi();
+
+  late ServiceModel _service;
   int _quantity = 1;
+  bool _isRefreshing = false;
+  String? _detailError;
+
+  @override
+  void initState() {
+    super.initState();
+    _service = widget.service;
+    _refreshServiceDetail();
+  }
+
+  Future<void> _refreshServiceDetail() async {
+    setState(() {
+      _isRefreshing = true;
+      _detailError = null;
+    });
+
+    try {
+      final latest = await _serviceApi.getServiceById(widget.service.id);
+      if (!mounted) return;
+      setState(() => _service = latest);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _detailError = 'Can not refresh service details right now.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+      }
+    }
+  }
 
   Future<void> _addToCart() async {
     final cartProvider = context.read<CartProvider>();
     final success = await cartProvider.addService(
-      widget.service.id,
+      _service.id,
       quantity: _quantity,
     );
 
     if (!mounted) return;
+    if (success) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen(initialIndex: 3)),
+        (route) => false,
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          success ? 'Added to cart' : 'Can not add service. Please try again.',
-        ),
+        content: Text(cartProvider.error ?? 'Session expired. Please log in again.'),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final service = widget.service;
+    final service = _service;
     final currencyFormatter = NumberFormat.currency(
       locale: 'vi_VN',
       symbol: 'd',
@@ -76,6 +119,11 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             children: [
+              if (_isRefreshing)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: _ServiceImage(imageUrl: service.imageUrl),
@@ -131,6 +179,16 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   ),
                 ],
               ),
+              if (_detailError != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _detailError!,
+                  style: GoogleFonts.openSans(
+                    color: Colors.orange.shade800,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
               const SizedBox(height: 22),
               Text(
                 'Description',
@@ -291,3 +349,8 @@ class _QuantityButton extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

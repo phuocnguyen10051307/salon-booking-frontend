@@ -3,61 +3,79 @@ import 'package:provider/provider.dart';
 
 import '../../../store/provider/cart_provider.dart';
 
+class HomeNavItem {
+  final IconData icon;
+  final String label;
+
+  const HomeNavItem({required this.icon, required this.label});
+}
+
 class HomeBottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int>? onTap;
+  final List<HomeNavItem> items;
+  final int? cartIndex;
 
-  const HomeBottomNav({super.key, this.selectedIndex = 0, this.onTap});
+  const HomeBottomNav({
+    super.key,
+    this.selectedIndex = 0,
+    this.onTap,
+    required this.items,
+    this.cartIndex,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _navItem(Icons.home, 0),
-          _navItem(Icons.explore, 1),
-          _navItem(Icons.calendar_today, 2),
-          Consumer<CartProvider>(
+        children: List.generate(items.length, (index) {
+          final item = items[index];
+          final nav = _navItem(item.icon, item.label, index);
+          if (cartIndex != index) return nav;
+          return Consumer<CartProvider>(
             builder: (context, provider, child) {
               return Badge(
                 isLabelVisible: provider.itemCount > 0,
                 label: Text(provider.itemCount.toString()),
-                child: _navItem(Icons.shopping_bag_outlined, 3),
+                child: nav,
               );
             },
-          ),
-          _navItem(Icons.person_outline, 4),
-        ],
+          );
+        }),
       ),
     );
   }
 
-  Widget _navItem(IconData icon, int idx) {
+  Widget _navItem(IconData icon, String label, int idx) {
     final active = idx == selectedIndex;
-    final darkTeal = const Color(0xFF00695C);
+    const darkTeal = Color(0xFF00695C);
     return GestureDetector(
       onTap: () => onTap?.call(idx),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: active ? darkTeal : Colors.grey[500]),
-          const SizedBox(height: 4),
-          if (active)
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: darkTeal,
-                shape: BoxShape.circle,
+      child: SizedBox(
+        width: 58,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: active ? darkTeal : Colors.grey[500]),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                color: active ? darkTeal : Colors.grey[500],
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

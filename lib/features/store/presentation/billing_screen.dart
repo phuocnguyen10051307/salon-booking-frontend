@@ -11,15 +11,18 @@ class BillingScreen extends StatelessWidget {
 
   const BillingScreen({super.key, required this.billing});
 
-  Future<void> _pay(BuildContext context) async {
+  Future<void> _pay(BuildContext context, BillingModel currentBilling) async {
     final provider = context.read<CartProvider>();
-    final paidBilling = await provider.payLatestBilling(billing.paymentMethod);
+    final paidBilling = await provider.payBilling(
+      billingId: currentBilling.id,
+      paymentMethod: currentBilling.paymentMethod,
+    );
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          paidBilling != null ? 'Payment completed' : 'Can not pay billing',
+          paidBilling != null ? 'Payment completed' : (provider.error ?? 'Can not pay billing'),
         ),
       ),
     );
@@ -49,7 +52,8 @@ class BillingScreen extends StatelessWidget {
       ),
       body: Consumer<CartProvider>(
         builder: (context, provider, child) {
-          final currentBilling = provider.latestBilling ?? billing;
+          final latestBilling = provider.latestBilling;
+          final currentBilling = latestBilling != null && latestBilling.id == billing.id ? latestBilling : billing;
           final isPaid = currentBilling.status == 'PAID';
 
           return ListView(
@@ -116,7 +120,7 @@ class BillingScreen extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: provider.isLoading || isPaid
                     ? null
-                    : () => _pay(context),
+                    : () => _pay(context, currentBilling),
                 icon: provider.isLoading
                     ? const SizedBox(
                         width: 18,
@@ -207,3 +211,4 @@ class _StatusPill extends StatelessWidget {
     );
   }
 }
+

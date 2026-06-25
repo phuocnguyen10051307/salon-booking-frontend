@@ -11,9 +11,16 @@ class ApiConstants {
   static const String resendSignupOtp = '/auth/resend-signup-otp';
   static const String me = '/auth/me';
   static const String signout = '/auth/signout';
+  static const String userProfile = '/users/profile';
+  static const String changePassword = '/users/change-password';
   static const String services = '/services';
   static const String cart = '/cart';
   static const String cartItems = '/cart/items';
   static const String bookings = '/bookings';
+  static const String bookingsCheckout = '/bookings/checkout';
   static const String billing = '/billing';
+  static const String stylists = '/stylists';
+  static const String staffTodayBookings = '/bookings/staff/today';
+  static const String chatMessages = '/chat/messages';
 }
+

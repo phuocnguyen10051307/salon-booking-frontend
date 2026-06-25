@@ -58,4 +58,38 @@ class AuthService {
   Future<Response> logout() async {
     return await ApiClient.dio.post(ApiConstants.signout);
   }
+
+  Future<Response> getProfile() async {
+    return await ApiClient.dio.get(ApiConstants.userProfile);
+  }
+
+  Future<Response> updateProfile({
+    required String fullName,
+    required String email,
+    required String phone,
+    String? avatarUrl,
+  }) async {
+    return await ApiClient.dio.put(
+      ApiConstants.userProfile,
+      data: {
+        'full_name': fullName,
+        'email': email,
+        'phone': phone,
+        'avatar_url': avatarUrl,
+      },
+    );
+  }
+
+  Future<Response> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    return await ApiClient.dio.put(
+      ApiConstants.changePassword,
+      data: {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      },
+    );
+  }
 }
