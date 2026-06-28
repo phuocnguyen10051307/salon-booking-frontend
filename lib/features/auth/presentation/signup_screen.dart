@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/themes/app_colors.dart';
-import '../../../../core/widgets/custom_button.dart';
-import '../../../../core/widgets/custom_text_field.dart';
+import '../../../core/themes/app_colors.dart';
+import '../../../core/widgets/custom_button.dart';
+import '../../../core/widgets/custom_text_field.dart';
 import '../provider/auth_provider.dart';
 import 'email_verification_screen.dart';
 

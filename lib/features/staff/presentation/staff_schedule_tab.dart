@@ -47,7 +47,7 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
             padding: const EdgeInsets.only(top: 16, bottom: 100),
             children: [
               Text(
-                'Today schedule',
+                'Lich hom nay',
                 style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
@@ -57,9 +57,9 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
               ),
               const SizedBox(height: 18),
               if (snapshot.hasError)
-                _StateBox(message: 'Can not load today schedule.')
+                _StateBox(message: 'Khong tai duoc lich hom nay.')
               else if (bookings.isEmpty)
-                _StateBox(message: 'No appointments for today.')
+                _StateBox(message: 'Hom nay chua co lich hen.')
               else
                 ...bookings.map((booking) => _BookingTile(booking: booking)),
             ],

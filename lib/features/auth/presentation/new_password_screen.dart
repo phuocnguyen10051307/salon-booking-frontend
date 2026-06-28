@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/themes/app_colors.dart';
+import '../../../core/themes/app_colors.dart';
 import 'login_screen.dart';
 
 class NewPasswordScreen extends StatefulWidget {

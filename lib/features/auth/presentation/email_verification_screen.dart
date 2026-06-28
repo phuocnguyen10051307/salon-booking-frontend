@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/themes/app_colors.dart';
+import '../../../core/themes/app_colors.dart';
 import '../provider/auth_provider.dart';
 import 'new_password_screen.dart';
 

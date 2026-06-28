@@ -27,6 +27,7 @@ class HomeBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -58,7 +59,7 @@ class HomeBottomNav extends StatelessWidget {
     return GestureDetector(
       onTap: () => onTap?.call(idx),
       child: SizedBox(
-        width: 58,
+        width: 64,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

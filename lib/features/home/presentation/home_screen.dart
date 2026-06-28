@@ -39,8 +39,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _selectedIndex = widget.initialIndex;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ServiceProvider>().fetchServices();
-      context.read<CartProvider>().fetchCart();
+      final role = _normalizedRole(context.read<AuthProvider>().currentUser?.role);
+      if (role == 'CUSTOMER') {
+        context.read<ServiceProvider>().fetchServices();
+        context.read<CartProvider>().fetchCart();
+      }
     });
   }
 
@@ -53,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<HomeNavItem> _itemsForRole(String role) {
     if (role == 'STAFF') {
       return const [
-        HomeNavItem(icon: Icons.today_outlined, label: 'Today'),
+        HomeNavItem(icon: Icons.today_outlined, label: 'Hom nay'),
         HomeNavItem(icon: Icons.chat_bubble_outline, label: 'Chat'),
         HomeNavItem(icon: Icons.person_outline, label: 'Profile'),
       ];
@@ -67,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return const [
       HomeNavItem(icon: Icons.home, label: 'Home'),
       HomeNavItem(icon: Icons.explore, label: 'Explore'),
-      HomeNavItem(icon: Icons.calendar_today, label: 'Booking'),
+      HomeNavItem(icon: Icons.chat_bubble_outline, label: 'Chat'),
       HomeNavItem(icon: Icons.shopping_bag_outlined, label: 'Cart'),
       HomeNavItem(icon: Icons.person_outline, label: 'Profile'),
     ];
@@ -95,10 +98,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return switch (_selectedIndex) {
+      1 => const _EmptyCustomerTab(title: 'Explore'),
+      2 => const ChatTab(),
       3 => const CartContent(),
       4 => const ProfileTab(),
       _ => _buildCustomerHome(authProvider),
     };
+  }
+
+  String _normalizedRole(String? role) {
+    final normalized = role?.trim().toUpperCase();
+    return normalized == null || normalized.isEmpty ? 'CUSTOMER' : normalized;
   }
 
   Widget _buildCustomerHome(AuthProvider authProvider) {
@@ -139,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    final role = authProvider.currentUser?.role?.toUpperCase() ?? 'CUSTOMER';
+    final role = _normalizedRole(authProvider.currentUser?.role);
     final items = _itemsForRole(role);
     final selectedIndex = _selectedIndex >= items.length ? 0 : _selectedIndex;
     if (selectedIndex != _selectedIndex) _selectedIndex = selectedIndex;
@@ -147,17 +157,46 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6FBFA),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: _bodyForRole(role, authProvider),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 84),
+              child: _bodyForRole(role, authProvider),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: HomeBottomNav(
+                selectedIndex: _selectedIndex,
+                onTap: _onNavTap,
+                items: items,
+                cartIndex: role == 'CUSTOMER' ? 3 : null,
+              ),
+            ),
+          ],
         ),
       ),
-      bottomNavigationBar: HomeBottomNav(
-        selectedIndex: _selectedIndex,
-        onTap: _onNavTap,
-        items: items,
-        cartIndex: role == 'CUSTOMER' ? 3 : null,
-      ),
+    );
+  }
+}
+
+
+class _EmptyCustomerTab extends StatelessWidget {
+  final String title;
+
+  const _EmptyCustomerTab({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Text(
+          title,
+          style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700),
+        ),
+        const Expanded(child: SizedBox.shrink()),
+      ],
     );
   }
 }

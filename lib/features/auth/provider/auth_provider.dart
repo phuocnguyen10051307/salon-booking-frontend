@@ -54,11 +54,12 @@ class AuthProvider extends ChangeNotifier {
     final token = prefs.getString('token') ?? '';
     if (token.isEmpty) {
       ApiClient.dio.options.headers.remove('Authorization');
+      currentUser = null;
       return false;
     }
 
     ApiClient.dio.options.headers['Authorization'] = 'Bearer $token';
-    return true;
+    return loadCurrentUser();
   }
 
   Future<bool> loadCurrentUser() async {

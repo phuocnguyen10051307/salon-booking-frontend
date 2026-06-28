@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/themes/app_colors.dart';
+import '../../../core/themes/app_colors.dart';
 import 'email_verification_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {

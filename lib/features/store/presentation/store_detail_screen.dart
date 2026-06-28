@@ -57,6 +57,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
 
   Future<void> _addToCart() async {
     final cartProvider = context.read<CartProvider>();
+    final messenger = ScaffoldMessenger.of(context);
     final success = await cartProvider.addService(
       _service.id,
       quantity: _quantity,
@@ -68,6 +69,11 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen(initialIndex: 3)),
         (route) => false,
+      );
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Added to cart. Open cart to choose booking time and stylist.'),
+        ),
       );
       return;
     }
@@ -349,6 +355,8 @@ class _QuantityButton extends StatelessWidget {
     );
   }
 }
+
+
 
 
 

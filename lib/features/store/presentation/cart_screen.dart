@@ -973,22 +973,66 @@ class _StylistSection extends StatelessWidget {
           Text('Choose stylist', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(
-            'Select the stylist who will handle this booking before checkout.',
-            style: GoogleFonts.openSans(color: Colors.grey.shade600),
+            'Choose the person who will handle this booking. You can set the date and time right below.',
+            style: GoogleFonts.openSans(color: Colors.grey.shade600, height: 1.4),
           ),
           const SizedBox(height: 12),
           if (isLoading)
             const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
           else if (stylists.isEmpty)
-            Text(
-              'No suitable stylist found for the selected services.',
-              style: GoogleFonts.openSans(color: Colors.orange.shade800),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7E8),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFF2D7A1)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Icon(Icons.info_outline, color: Color(0xFF9A6500)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'No active stylist is available right now. Please try another service or come back later.',
+                      style: GoogleFonts.openSans(color: const Color(0xFF9A6500), height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
             )
-          else
+          else ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4FBF9),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.badge_outlined, color: Color(0xFF00695C), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${stylists.length} stylist available for this booking.',
+                      style: GoogleFonts.openSans(
+                        color: const Color(0xFF00695C),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: selectedStylistId,
               decoration: InputDecoration(
                 labelText: 'Stylist',
+                hintText: 'Select a stylist',
                 filled: true,
                 fillColor: const Color(0xFFF7FAFA),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -1003,6 +1047,7 @@ class _StylistSection extends StatelessWidget {
                   .toList(),
               onChanged: onChanged,
             ),
+          ],
         ],
       ),
     );
@@ -1278,4 +1323,7 @@ class _EmptyCart extends StatelessWidget {
     );
   }
 }
+
+
+
 
