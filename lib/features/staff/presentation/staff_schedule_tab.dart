@@ -15,22 +15,64 @@ class StaffScheduleTab extends StatefulWidget {
 class _StaffScheduleTabState extends State<StaffScheduleTab> {
   final StaffApi _api = StaffApi();
   late Future<List<BookingModel>> _future;
+  late DateTime _selectedDate;
 
   @override
   void initState() {
     super.initState();
-    _future = _api.getTodayBookings();
+    _selectedDate = _today;
+    _future = _loadBookings();
+  }
+
+  DateTime get _today {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  Future<List<BookingModel>> _loadBookings() {
+    return _api.getBookingsForDate(date: _selectedDate);
   }
 
   Future<void> _refresh() async {
     setState(() {
-      _future = _api.getTodayBookings();
+      _future = _loadBookings();
+    });
+    await _future;
+  }
+
+  Future<void> _showToday() async {
+    final today = _today;
+    if (_selectedDate == today) return _refresh();
+
+    setState(() {
+      _selectedDate = today;
+      _future = _loadBookings();
+    });
+    await _future;
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked == null) return;
+
+    final normalized = DateTime(picked.year, picked.month, picked.day);
+    setState(() {
+      _selectedDate = normalized;
+      _future = _loadBookings();
     });
     await _future;
   }
 
   @override
   Widget build(BuildContext context) {
+    final isToday = _selectedDate == _today;
+
     return RefreshIndicator(
       onRefresh: _refresh,
       color: const Color(0xFF00695C),
@@ -47,19 +89,42 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
             padding: const EdgeInsets.only(top: 16, bottom: 100),
             children: [
               Text(
-                'Lich hom nay',
+                'Lich lam viec',
                 style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
-                DateFormat('EEEE, dd/MM/yyyy').format(DateTime.now()),
+                DateFormat('EEEE, dd/MM/yyyy').format(_selectedDate),
                 style: GoogleFonts.openSans(color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  FilledButton.icon(
+                    onPressed: _showToday,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF00695C),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.today),
+                    label: Text(isToday ? 'Hom nay' : 'Ve hom nay'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _pickDate,
+                    icon: const Icon(Icons.calendar_month),
+                    label: const Text('Chon ngay'),
+                  ),
+                ],
               ),
               const SizedBox(height: 18),
               if (snapshot.hasError)
-                _StateBox(message: 'Khong tai duoc lich hom nay.')
+                _StateBox(message: 'Khong tai duoc lich lam viec.')
               else if (bookings.isEmpty)
-                _StateBox(message: 'Hom nay chua co lich hen.')
+                _StateBox(
+                  message: isToday ? 'Hom nay chua co lich hen.' : 'Ngay nay chua co lich hen.',
+                )
               else
                 ...bookings.map((booking) => _BookingTile(booking: booking)),
             ],
