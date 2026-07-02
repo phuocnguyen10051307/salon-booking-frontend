@@ -114,6 +114,27 @@ class CartProvider extends ChangeNotifier {
     return success ? _latestBilling : null;
   }
 
+  Future<bool> submitReview({
+    required String billingId,
+    required String serviceId,
+    required int rating,
+    String? comment,
+  }) {
+    return _run(() async {
+      await _cartApi.submitReview(
+        billingId: billingId,
+        serviceId: serviceId,
+        rating: rating,
+        comment: comment,
+      );
+      _billings = await _cartApi.getBillings();
+      final matched = _billings.where((item) => item.id == billingId);
+      if (matched.isNotEmpty) {
+        _latestBilling = matched.first;
+      }
+    });
+  }
+
   String _readErrorMessage(Object error) {
     if (error is DioException) {
       final data = error.response?.data;
@@ -143,4 +164,3 @@ class CartProvider extends ChangeNotifier {
     }
   }
 }
-

@@ -3,6 +3,7 @@ import '../../../core/network/api_client.dart';
 import 'models/billing_model.dart';
 import 'models/booking_model.dart';
 import 'models/cart_item_model.dart';
+import 'models/review_model.dart';
 import 'models/stylist_model.dart';
 
 class CheckoutResult {
@@ -105,6 +106,24 @@ class CartApi {
     );
     final billing = response.data['data']?['billing'] ?? response.data['billing'];
     return BillingModel.fromJson(Map<String, dynamic>.from(billing as Map));
+  }
+
+  Future<ReviewModel> submitReview({
+    required String billingId,
+    required String serviceId,
+    required int rating,
+    String? comment,
+  }) async {
+    final response = await ApiClient.dio.post(
+      '${ApiConstants.reviews}/billing/$billingId',
+      data: {
+        'service_id': serviceId,
+        'rating': rating,
+        if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
+      },
+    );
+    final review = response.data['data']?['review'] ?? response.data['review'];
+    return ReviewModel.fromJson(Map<String, dynamic>.from(review as Map));
   }
 
   String _formatDate(DateTime date) {

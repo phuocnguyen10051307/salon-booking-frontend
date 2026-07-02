@@ -30,6 +30,9 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
     return DateTime(now.year, now.month, now.day);
   }
 
+  bool _isSameDate(DateTime left, DateTime right) =>
+      left.year == right.year && left.month == right.month && left.day == right.day;
+
   Future<List<BookingModel>> _loadBookings() {
     return _api.getBookingsForDate(date: _selectedDate);
   }
@@ -43,7 +46,7 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
 
   Future<void> _showToday() async {
     final today = _today;
-    if (_selectedDate == today) return _refresh();
+    if (_isSameDate(_selectedDate, today)) return _refresh();
 
     setState(() {
       _selectedDate = today;
@@ -53,11 +56,13 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
   }
 
   Future<void> _pickDate() async {
+    final today = _today;
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      lastDate: today,
+      selectableDayPredicate: (date) => !date.isAfter(today),
     );
 
     if (picked == null) return;
@@ -110,7 +115,7 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
 
   @override
   Widget build(BuildContext context) {
-    final isToday = _selectedDate == _today;
+    final isToday = _isSameDate(_selectedDate, _today);
 
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -469,3 +474,4 @@ String _formatTime(String? raw) {
   final match = RegExp(r'(\d{2}:\d{2})').firstMatch(raw);
   return match?.group(1) ?? raw;
 }
+

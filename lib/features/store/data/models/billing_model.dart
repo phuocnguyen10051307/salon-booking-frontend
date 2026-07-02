@@ -30,10 +30,8 @@ class BillingModel {
       code: json['billing_code']?.toString() ?? '',
       bookingId: json['booking_id']?.toString() ?? '',
       subtotal: double.tryParse(json['subtotal']?.toString() ?? '0') ?? 0,
-      discountAmount:
-          double.tryParse(json['discount_amount']?.toString() ?? '0') ?? 0,
-      totalAmount:
-          double.tryParse(json['total_amount']?.toString() ?? '0') ?? 0,
+      discountAmount: double.tryParse(json['discount_amount']?.toString() ?? '0') ?? 0,
+      totalAmount: double.tryParse(json['total_amount']?.toString() ?? '0') ?? 0,
       paymentMethod: json['payment_method']?.toString() ?? 'CASH',
       status: json['status']?.toString() ?? 'UNPAID',
       booking: booking is Map ? BookingModel.fromJson(Map<String, dynamic>.from(booking)) : null,

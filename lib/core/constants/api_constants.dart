@@ -19,9 +19,12 @@ class ApiConstants {
   static const String bookings = '/bookings';
   static const String bookingsCheckout = '/bookings/checkout';
   static const String billing = '/billing';
+  static const String reviews = '/reviews';
   static const String stylists = '/stylists';
   static const String staffTodayBookings = '/bookings/staff/today';
   static const String chatMessages = '/chat/messages';
   static const String locations = '/locations';
   static const String locationsMap = '/locations/map';
 }
+
+
