@@ -11,23 +11,6 @@ class BillingScreen extends StatelessWidget {
 
   const BillingScreen({super.key, required this.billing});
 
-  Future<void> _pay(BuildContext context, BillingModel currentBilling) async {
-    final provider = context.read<CartProvider>();
-    final paidBilling = await provider.payBilling(
-      billingId: currentBilling.id,
-      paymentMethod: currentBilling.paymentMethod,
-    );
-
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          paidBilling != null ? 'Payment completed' : (provider.error ?? 'Can not pay billing'),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final currencyFormatter = NumberFormat.currency(
@@ -108,45 +91,45 @@ class BillingScreen extends StatelessWidget {
                       ),
                       isStrong: true,
                     ),
+
+                    if (currentBilling.booking != null) ...[
+                      const Divider(height: 28),
+                      _AmountRow(
+                        label: 'Booking time',
+                        value: _bookingTimeLabel(currentBilling.booking),
+                      ),
+                      const SizedBox(height: 10),
+                      _AmountRow(
+                        label: 'Services',
+                        value: currentBilling.booking!.serviceNames.isEmpty
+                            ? 'No services'
+                            : currentBilling.booking!.serviceNames.join(', '),
+                      ),
+                    ],
                     const SizedBox(height: 14),
                     _AmountRow(
                       label: 'Payment',
-                      value: currentBilling.paymentMethod,
+                      value: isPaid ? currentBilling.paymentMethod : 'Pay at salon after service',
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
-              ElevatedButton.icon(
-                onPressed: provider.isLoading || isPaid
-                    ? null
-                    : () => _pay(context, currentBilling),
-                icon: provider.isLoading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(isPaid ? Icons.check_circle : Icons.payments),
-                label: Text(
-                  isPaid ? 'Paid' : 'Mark as paid',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00695C),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
+
             ],
           );
         },
       ),
     );
   }
+}
+
+String _bookingTimeLabel(dynamic booking) {
+  final rawDate = booking.bookingDate?.toString() ?? '';
+  final rawTime = booking.bookingTime?.toString() ?? '';
+  final date = rawDate.length >= 10 ? rawDate.substring(0, 10) : rawDate;
+  final match = RegExp(r'(\d{2}:\d{2})').firstMatch(rawTime);
+  final time = match?.group(1) ?? rawTime;
+  return [date, time].where((item) => item.isNotEmpty).join(' ');
 }
 
 class _AmountRow extends StatelessWidget {

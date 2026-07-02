@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/provider/auth_provider.dart';
+import 'features/home/provider/home_provider.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/store/provider/cart_provider.dart';
 import 'features/store/provider/service_provider.dart';
@@ -48,6 +49,7 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => HomeProvider()),
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
       ],

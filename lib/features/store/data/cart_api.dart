@@ -73,7 +73,6 @@ class CartApi {
   Future<CheckoutResult> checkout({
     required DateTime bookingDate,
     required String bookingTime,
-    required String paymentMethod,
     String? stylistId,
     List<String> selectedItemIds = const [],
     String? note,
@@ -83,7 +82,6 @@ class CartApi {
       data: {
         'booking_date': _formatDate(bookingDate),
         'booking_time': bookingTime,
-        'payment_method': paymentMethod,
         if (stylistId != null && stylistId.isNotEmpty) 'stylist_id': stylistId,
         if (selectedItemIds.isNotEmpty) 'cart_item_ids': selectedItemIds,
         if (note != null && note.trim().isNotEmpty) 'note': note.trim(),

@@ -83,7 +83,6 @@ class CartProvider extends ChangeNotifier {
   Future<BillingModel?> checkout({
     required DateTime bookingDate,
     required String bookingTime,
-    required String paymentMethod,
     String? stylistId,
     List<String> selectedItemIds = const [],
     String? note,
@@ -92,7 +91,6 @@ class CartProvider extends ChangeNotifier {
       final result = await _cartApi.checkout(
         bookingDate: bookingDate,
         bookingTime: bookingTime,
-        paymentMethod: paymentMethod,
         stylistId: stylistId,
         selectedItemIds: selectedItemIds,
         note: note,

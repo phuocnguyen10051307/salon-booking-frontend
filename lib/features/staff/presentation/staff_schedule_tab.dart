@@ -16,6 +16,7 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
   final StaffApi _api = StaffApi();
   late Future<List<BookingModel>> _future;
   late DateTime _selectedDate;
+  String? _collectingBookingId;
 
   @override
   void initState() {
@@ -67,6 +68,44 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
       _future = _loadBookings();
     });
     await _future;
+  }
+
+  Future<void> _openBookingDetails(BookingModel booking) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => _BookingDetailsSheet(
+        booking: booking,
+        isCollecting: _collectingBookingId == booking.id,
+        onCollectPayment: (paymentMethod) {
+          Navigator.of(context).pop();
+          _collectPayment(booking, paymentMethod);
+        },
+      ),
+    );
+  }
+
+  Future<void> _collectPayment(BookingModel booking, String paymentMethod) async {
+    setState(() => _collectingBookingId = booking.id);
+    try {
+      await _api.collectBookingPayment(bookingId: booking.id, paymentMethod: paymentMethod);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Da ghi nhan thanh toan.')),
+      );
+      await _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Khong ghi nhan duoc thanh toan: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _collectingBookingId = null);
+    }
   }
 
   @override
@@ -126,7 +165,13 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
                   message: isToday ? 'Hom nay chua co lich hen.' : 'Ngay nay chua co lich hen.',
                 )
               else
-                ...bookings.map((booking) => _BookingTile(booking: booking)),
+                ...bookings.map(
+                  (booking) => _BookingTile(
+                    booking: booking,
+                    isCollecting: _collectingBookingId == booking.id,
+                    onTap: () => _openBookingDetails(booking),
+                  ),
+                ),
             ],
           );
         },
@@ -137,78 +182,262 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
 
 class _BookingTile extends StatelessWidget {
   final BookingModel booking;
+  final bool isCollecting;
+  final VoidCallback onTap;
 
-  const _BookingTile({required this.booking});
+  const _BookingTile({required this.booking, required this.isCollecting, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final services = booking.serviceNames.isEmpty ? 'No services' : booking.serviceNames.join(', ');
     final time = _formatTime(booking.bookingTime);
+    final billingStatus = booking.billingStatus ?? 'UNPAID';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 58,
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0F2F1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              time,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                color: const Color(0xFF00695C),
-                fontWeight: FontWeight.w700,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 58,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0F2F1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                time,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFF00695C),
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  booking.customerName ?? 'Customer',
-                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  services,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.openSans(color: Colors.grey.shade700),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  booking.status ?? 'PENDING',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: const Color(0xFF00695C),
-                    fontWeight: FontWeight.w700,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    booking.customerName ?? 'Customer',
+                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    services,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.openSans(color: Colors.grey.shade700),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      _StatusPill(label: booking.status ?? 'PENDING', isPaid: false),
+                      _StatusPill(label: billingStatus, isPaid: billingStatus == 'PAID'),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            isCollecting
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.chevron_right, color: Colors.black45),
+          ],
+        ),
       ),
     );
   }
+}
 
-  String _formatTime(String? raw) {
-    if (raw == null || raw.isEmpty) return '--:--';
-    final match = RegExp(r'(\d{2}:\d{2})').firstMatch(raw);
-    return match?.group(1) ?? raw;
+class _BookingDetailsSheet extends StatelessWidget {
+  final BookingModel booking;
+  final bool isCollecting;
+  final ValueChanged<String> onCollectPayment;
+
+  const _BookingDetailsSheet({
+    required this.booking,
+    required this.isCollecting,
+    required this.onCollectPayment,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'd');
+    final isPaid = booking.billingStatus == 'PAID';
+    final services = booking.serviceNames.isEmpty ? ['No services'] : booking.serviceNames;
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 18,
+          right: 18,
+          top: 18,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 18,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    booking.customerName ?? 'Customer',
+                    style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                _StatusPill(label: booking.billingStatus ?? 'UNPAID', isPaid: isPaid),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _DetailRow(icon: Icons.schedule, label: 'Time', value: _formatTime(booking.bookingTime)),
+            const SizedBox(height: 10),
+            _DetailRow(icon: Icons.confirmation_number_outlined, label: 'Booking', value: booking.code),
+            const SizedBox(height: 10),
+            _DetailRow(icon: Icons.payments_outlined, label: 'Total', value: currencyFormatter.format(booking.totalAmount)),
+            const SizedBox(height: 18),
+            Text('Services', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            ...services.map(
+              (service) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline, size: 18, color: Color(0xFF00695C)),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(service, style: GoogleFonts.openSans(color: Colors.grey.shade800))),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            if (isPaid)
+              _PaidNotice(paymentMethod: booking.paymentMethod ?? 'CASH')
+            else
+              _PaymentMethodButtons(isCollecting: isCollecting, onSelected: onCollectPayment),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentMethodButtons extends StatelessWidget {
+  final bool isCollecting;
+  final ValueChanged<String> onSelected;
+
+  const _PaymentMethodButtons({required this.isCollecting, required this.onSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    final methods = const [
+      ('CASH', 'Tien mat', Icons.payments_outlined),
+      ('BANK_TRANSFER', 'Chuyen khoan', Icons.account_balance_outlined),
+      ('CARD', 'The', Icons.credit_card),
+      ('E_WALLET', 'Vi dien tu', Icons.account_balance_wallet_outlined),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Thu tien sau khi xong dich vu', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: methods
+              .map(
+                (method) => OutlinedButton.icon(
+                  onPressed: isCollecting ? null : () => onSelected(method.$1),
+                  icon: Icon(method.$3, size: 18),
+                  label: Text(method.$2),
+                ),
+              )
+              .toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _PaidNotice extends StatelessWidget {
+  final String paymentMethod;
+
+  const _PaidNotice({required this.paymentMethod});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F6EE),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        'Da thanh toan bang $paymentMethod',
+        style: GoogleFonts.poppins(color: const Color(0xFF00695C), fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetailRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: const Color(0xFF00695C)),
+        const SizedBox(width: 10),
+        Text('$label: ', style: GoogleFonts.openSans(color: Colors.grey.shade600)),
+        Expanded(child: Text(value, style: GoogleFonts.poppins(fontWeight: FontWeight.w600))),
+      ],
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  final String label;
+  final bool isPaid;
+
+  const _StatusPill({required this.label, required this.isPaid});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isPaid ? const Color(0xFFE3F6EE) : const Color(0xFFFFF3D8),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.poppins(
+          color: isPaid ? const Color(0xFF00695C) : const Color(0xFF9A6500),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 }
 
@@ -233,4 +462,10 @@ class _StateBox extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatTime(String? raw) {
+  if (raw == null || raw.isEmpty) return '--:--';
+  final match = RegExp(r'(\d{2}:\d{2})').firstMatch(raw);
+  return match?.group(1) ?? raw;
 }

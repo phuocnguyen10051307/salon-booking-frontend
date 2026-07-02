@@ -8,6 +8,9 @@ class BookingModel {
   final String? customerName;
   final String? stylistName;
   final List<String> serviceNames;
+  final String? billingId;
+  final String? billingStatus;
+  final String? paymentMethod;
 
   const BookingModel({
     required this.id,
@@ -19,12 +22,16 @@ class BookingModel {
     this.customerName,
     this.stylistName,
     this.serviceNames = const [],
+    this.billingId,
+    this.billingStatus,
+    this.paymentMethod,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     final user = json['users'];
     final stylist = json['stylists'];
     final items = json['booking_items'];
+    final billing = json['billings'];
     return BookingModel(
       id: json['booking_id']?.toString() ?? '',
       code: json['booking_code']?.toString() ?? '',
@@ -43,6 +50,9 @@ class BookingModel {
               .where((name) => name.isNotEmpty)
               .toList()
           : const [],
+      billingId: billing is Map ? billing['billing_id']?.toString() : null,
+      billingStatus: billing is Map ? billing['status']?.toString() : null,
+      paymentMethod: billing is Map ? billing['payment_method']?.toString() : null,
     );
   }
 }

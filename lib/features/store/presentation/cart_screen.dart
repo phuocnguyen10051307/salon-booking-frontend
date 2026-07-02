@@ -270,7 +270,6 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
   final TextEditingController _noteController = TextEditingController();
   DateTime _bookingDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _bookingTime = const TimeOfDay(hour: 9, minute: 0);
-  String _paymentMethod = 'CASH';
   String? _selectedStylistId;
 
   @override
@@ -325,7 +324,6 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
     final billing = await provider.checkout(
       bookingDate: _bookingDate,
       bookingTime: _formatTime(_bookingTime),
-      paymentMethod: _paymentMethod,
       stylistId: _selectedStylistId,
       selectedItemIds: widget.items.map((item) => item.id).toList(),
       note: _noteController.text,
@@ -388,13 +386,9 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
               _CheckoutSection(
                 dateLabel: dateFormatter.format(_bookingDate),
                 timeLabel: _bookingTime.format(context),
-                paymentMethod: _paymentMethod,
-                noteController: _noteController,
+                          noteController: _noteController,
                 onPickDate: _pickDate,
                 onPickTime: _pickTime,
-                onPaymentChanged: (value) {
-                  if (value != null) setState(() => _paymentMethod = value);
-                },
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -405,7 +399,7 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Icon(Icons.payments_outlined),
+                    : const Icon(Icons.event_available_outlined),
                 label: Text('Confirm checkout', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00695C),
@@ -888,7 +882,7 @@ class _BillingTile extends StatelessWidget {
                   Text(billing.code, style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
                   Text(
-                    'Method: ${billing.paymentMethod}',
+                    billing.status == 'PAID' ? 'Method: ${billing.paymentMethod}' : 'Payment: Staff will collect after service',
                     style: GoogleFonts.openSans(color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 4),
@@ -1057,20 +1051,16 @@ class _StylistSection extends StatelessWidget {
 class _CheckoutSection extends StatelessWidget {
   final String dateLabel;
   final String timeLabel;
-  final String paymentMethod;
   final TextEditingController noteController;
   final VoidCallback onPickDate;
   final VoidCallback onPickTime;
-  final ValueChanged<String?> onPaymentChanged;
 
   const _CheckoutSection({
     required this.dateLabel,
     required this.timeLabel,
-    required this.paymentMethod,
     required this.noteController,
     required this.onPickDate,
     required this.onPickTime,
-    required this.onPaymentChanged,
   });
 
   @override
@@ -1090,7 +1080,7 @@ class _CheckoutSection extends StatelessWidget {
           Text('Booking information', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(
-            'Choose date, time, payment method, and any note before creating the booking.',
+            'Choose date, time, stylist, and any note before creating the booking.',
             style: GoogleFonts.openSans(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 14),
@@ -1100,23 +1090,6 @@ class _CheckoutSection extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(child: _PickerButton(icon: Icons.schedule, label: timeLabel, onPressed: onPickTime)),
             ],
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: paymentMethod,
-            decoration: InputDecoration(
-              labelText: 'Payment method',
-              filled: true,
-              fillColor: const Color(0xFFF7FAFA),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-            ),
-            items: const [
-              DropdownMenuItem(value: 'CASH', child: Text('Cash')),
-              DropdownMenuItem(value: 'CARD', child: Text('Card')),
-              DropdownMenuItem(value: 'BANK_TRANSFER', child: Text('Bank transfer')),
-              DropdownMenuItem(value: 'E_WALLET', child: Text('E-wallet')),
-            ],
-            onChanged: onPaymentChanged,
           ),
           const SizedBox(height: 12),
           TextField(
