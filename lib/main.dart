@@ -1,45 +1,14 @@
-import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/provider/auth_provider.dart';
+import 'features/chat/provider/chat_provider.dart';
 import 'features/home/provider/home_provider.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/store/provider/cart_provider.dart';
 import 'features/store/provider/service_provider.dart';
-
-Future<void> testConnection() async {
-  print('=== START TEST ===');
-
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: kIsWeb ? 'http://localhost:3000' : 'http://10.0.2.2:3000',
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 5),
-    ),
-  );
-
-  print('=== BEFORE REQUEST ===');
-
-  try {
-    final response = await dio.get('/v1/status');
-
-    print('=== SUCCESS ===');
-    print(response.data);
-  } on DioException catch (e) {
-    print('=== DIO ERROR ===');
-    print(e.type);
-    print(e.message);
-  } catch (e) {
-    print('=== OTHER ERROR ===');
-    print(e);
-  }
-
-  print('=== END TEST ===');
-}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +18,16 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
+          create: (_) => ChatProvider(),
+          update: (_, auth, chat) {
+            final provider = chat ?? ChatProvider();
+            Future.microtask(
+              () => provider.syncSession(auth.currentUser, auth.accessToken),
+            );
+            return provider;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => HomeProvider()),
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),

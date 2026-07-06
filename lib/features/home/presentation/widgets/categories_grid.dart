@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../store/presentation/store_list_screen.dart';
 
 class CategoriesGrid extends StatelessWidget {
-  const CategoriesGrid({Key? key}) : super(key: key);
+  const CategoriesGrid({super.key});
 
   @override
   Widget build(BuildContext context) {

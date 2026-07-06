@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../store/presentation/store_list_screen.dart';
 
 class MostSearchInterest extends StatelessWidget {
-  const MostSearchInterest({Key? key}) : super(key: key);
+  const MostSearchInterest({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +34,7 @@ class MostSearchInterest extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) => Material(
           color: lightTeal,
           borderRadius: BorderRadius.circular(24),

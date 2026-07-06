@@ -302,7 +302,7 @@ class _ServiceFormState extends State<_ServiceForm> {
                       height: 160,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         height: 160,
                         color: const Color(0xFFF7FAFA),
                         alignment: Alignment.center,

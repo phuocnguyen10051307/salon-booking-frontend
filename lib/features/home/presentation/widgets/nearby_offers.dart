@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class NearbyOffers extends StatelessWidget {
-  const NearbyOffers({Key? key}) : super(key: key);
+  const NearbyOffers({super.key});
 
   @override
   Widget build(BuildContext context) {

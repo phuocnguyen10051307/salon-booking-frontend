@@ -12,6 +12,9 @@ class AuthProvider extends ChangeNotifier {
   bool isLoading = false;
   UserModel? currentUser;
   String? errorMessage;
+  String? _accessToken;
+
+  String? get accessToken => _accessToken;
 
   Future<bool> login(String identifier, String password) async {
     try {
@@ -34,6 +37,7 @@ class AuthProvider extends ChangeNotifier {
         if (token != null && token.isNotEmpty) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('token', token);
+          _accessToken = token;
           ApiClient.dio.options.headers['Authorization'] = 'Bearer $token';
           return await loadCurrentUser();
         }
@@ -54,11 +58,13 @@ class AuthProvider extends ChangeNotifier {
     final token = prefs.getString('token') ?? '';
     if (token.isEmpty) {
       ApiClient.dio.options.headers.remove('Authorization');
+      _accessToken = null;
       currentUser = null;
       return false;
     }
 
     ApiClient.dio.options.headers['Authorization'] = 'Bearer $token';
+    _accessToken = token;
     return loadCurrentUser();
   }
 
@@ -73,6 +79,7 @@ class AuthProvider extends ChangeNotifier {
       if (token.isEmpty) return false;
 
       ApiClient.dio.options.headers['Authorization'] = 'Bearer $token';
+      _accessToken = token;
       final response = await _authService.getCurrentUser(token: token);
       if (response.statusCode == 200) {
         final data = response.data;
@@ -80,8 +87,8 @@ class AuthProvider extends ChangeNotifier {
         final userJson = responseData is Map<String, dynamic>
             ? responseData['user']
             : data is Map<String, dynamic>
-                ? data['user']
-                : null;
+            ? data['user']
+            : null;
 
         if (userJson is Map<String, dynamic>) {
           currentUser = UserModel.fromJson(userJson);
@@ -96,6 +103,7 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('token');
       ApiClient.dio.options.headers.remove('Authorization');
+      _accessToken = null;
       currentUser = null;
       return false;
     } finally {
@@ -112,6 +120,7 @@ class AuthProvider extends ChangeNotifier {
     }
 
     currentUser = null;
+    _accessToken = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     ApiClient.dio.options.headers.remove('Authorization');
@@ -202,8 +211,8 @@ class AuthProvider extends ChangeNotifier {
       final userJson = responseData is Map<String, dynamic>
           ? responseData['user']
           : data is Map<String, dynamic>
-              ? data['user']
-              : null;
+          ? data['user']
+          : null;
 
       if (userJson is Map<String, dynamic>) {
         currentUser = UserModel.fromJson(userJson);

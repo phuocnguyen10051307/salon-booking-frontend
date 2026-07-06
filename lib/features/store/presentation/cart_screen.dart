@@ -182,7 +182,7 @@ class _CartContentState extends State<CartContent> {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 18,
                         offset: const Offset(0, 10),
                       ),
@@ -444,7 +444,7 @@ class _CartHero extends StatelessWidget {
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.12)),
+                  style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.12)),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -461,7 +461,7 @@ class _CartHero extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Pick a service for quick checkout, or combine several services before confirming your booking.',
-            style: GoogleFonts.openSans(color: Colors.white.withOpacity(0.9), height: 1.4),
+            style: GoogleFonts.openSans(color: Colors.white.withValues(alpha: 0.9), height: 1.4),
           ),
           const SizedBox(height: 18),
           Row(
@@ -488,13 +488,13 @@ class _HeroStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.14),
+        color: Colors.white.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: GoogleFonts.openSans(color: Colors.white.withOpacity(0.86), fontSize: 12)),
+          Text(label, style: GoogleFonts.openSans(color: Colors.white.withValues(alpha: 0.86), fontSize: 12)),
           const SizedBox(height: 6),
           Text(value, style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
         ],
@@ -537,7 +537,7 @@ class _CartItemTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: isSelected ? const Color(0xFF26A69A) : Colors.transparent, width: 1.4),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 18, offset: const Offset(0, 10)),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
           ],
         ),
         child: Row(
@@ -637,7 +637,7 @@ class _CheckoutItemTile extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
         ],
       ),
       child: Row(
@@ -685,7 +685,7 @@ class _SelectionSummary extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
@@ -766,7 +766,7 @@ class _BillingSection extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
@@ -958,7 +958,7 @@ class _StylistSection extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
@@ -1071,7 +1071,7 @@ class _CheckoutSection extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
@@ -1224,7 +1224,7 @@ class _RequestErrorCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
@@ -1271,7 +1271,7 @@ class _EmptyCart extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
