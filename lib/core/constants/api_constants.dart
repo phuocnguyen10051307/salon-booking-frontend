@@ -1,16 +1,30 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiConstants {
-  static String get baseUrl => _requiredUrl('API_BASE_URL');
-  static String get socketBaseUrl => _requiredUrl('SOCKET_BASE_URL');
+  static String get baseUrl => _platformUrl('API_BASE_URL');
+  static String get socketBaseUrl => _platformUrl('SOCKET_BASE_URL');
+
+  static String _platformUrl(String key) {
+    final platformKey =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+        ? '${key}_ANDROID'
+        : '${key}_WEB';
+    final value = dotenv.env[platformKey]?.trim();
+    if (value != null && value.isNotEmpty) return _normalize(value);
+    return _requiredUrl(key);
+  }
 
   static String _requiredUrl(String key) {
     final value = dotenv.env[key]?.trim();
     if (value == null || value.isEmpty) {
       throw StateError('$key must be configured in .env');
     }
-    return value.replaceFirst(RegExp(r'/$'), '');
+    return _normalize(value);
   }
+
+  static String _normalize(String value) =>
+      value.replaceFirst(RegExp(r'/$'), '');
 
   static const String login = '/auth/signin';
   static const String signup = '/auth/signup';
@@ -29,7 +43,6 @@ class ApiConstants {
   static const String reviews = '/reviews';
   static const String stylists = '/stylists';
   static const String staffTodayBookings = '/bookings/staff/today';
-  static const String chatMessages = '/chat/messages';
   static const String chatConversations = '/chat/conversations';
   static const String locations = '/locations';
   static const String locationsMap = '/locations/map';

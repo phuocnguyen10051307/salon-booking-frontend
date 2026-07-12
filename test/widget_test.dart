@@ -6,7 +6,6 @@ void main() {
     final message = ChatMessageModel.fromJson({
       'id': 'message-1',
       'conversationId': 'conversation-1',
-      'clientMessageId': 'client-1',
       'content': 'Hello',
       'senderRole': 'STAFF',
       'sender': {
@@ -21,7 +20,7 @@ void main() {
     expect(message.id, 'message-1');
     expect(message.sender.role, 'STAFF');
     expect(message.content, 'Hello');
-    expect(message.deliveryStatus, MessageDeliveryStatus.sent);
+    expect(message.createdAt.isUtc, isFalse);
   });
 
   test('conversation parses unread and read summary state', () {

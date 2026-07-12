@@ -44,7 +44,6 @@ class ChatSocketService {
   final _messageController = StreamController<ChatMessageModel>.broadcast();
   final _conversationController =
       StreamController<ChatConversationModel>.broadcast();
-  final _receiptController = StreamController<MessageReadReceipt>.broadcast();
   final _typingController = StreamController<ChatTypingEvent>.broadcast();
   final _errorController = StreamController<ChatSocketException>.broadcast();
 
@@ -53,7 +52,6 @@ class ChatSocketService {
   Stream<ChatMessageModel> get messages => _messageController.stream;
   Stream<ChatConversationModel> get conversations =>
       _conversationController.stream;
-  Stream<MessageReadReceipt> get receipts => _receiptController.stream;
   Stream<ChatTypingEvent> get typingEvents => _typingController.stream;
   Stream<ChatSocketException> get errors => _errorController.stream;
 
@@ -104,7 +102,10 @@ class ChatSocketService {
       }
       _errorController.add(parsed);
     });
-    socket.on('error', (error) => _errorController.add(_parseError(error)));
+    socket.on(
+      'message:error',
+      (error) => _errorController.add(_parseError(error)),
+    );
     socket.on('message:new', (payload) {
       final data = _asMap(payload);
       if (data['message'] is Map) {
@@ -125,11 +126,10 @@ class ChatSocketService {
         );
       }
     });
-    socket.on('message:read', (payload) {
-      _receiptController.add(MessageReadReceipt.fromJson(_asMap(payload)));
+    socket.on('user:typing', (payload) {
+      final data = _asMap(payload);
+      _addTyping(data, data['isTyping'] == true);
     });
-    socket.on('typing:start', (payload) => _addTyping(payload, true));
-    socket.on('typing:stop', (payload) => _addTyping(payload, false));
     socket.connect();
   }
 
@@ -158,29 +158,14 @@ class ChatSocketService {
 
   Future<ChatMessageModel> sendMessage({
     required String conversationId,
-    required String clientMessageId,
     required String content,
   }) async {
     final data = await _emit('message:send', {
       'conversationId': conversationId,
-      'clientMessageId': clientMessageId,
       'content': content,
     });
     return ChatMessageModel.fromJson(
       Map<String, dynamic>.from(data['message'] as Map),
-    );
-  }
-
-  Future<MessageReadReceipt> markRead(
-    String conversationId,
-    String messageId,
-  ) async {
-    final data = await _emit('message:read', {
-      'conversationId': conversationId,
-      'messageId': messageId,
-    });
-    return MessageReadReceipt.fromJson(
-      Map<String, dynamic>.from(data['receipt'] as Map),
     );
   }
 
@@ -208,17 +193,14 @@ class ChatSocketService {
       payload,
       ack: (response) {
         final data = _asMap(response);
-        if (data['ok'] == true && data['data'] is Map) {
+        if (data['success'] == true && data['data'] is Map) {
           completer.complete(Map<String, dynamic>.from(data['data'] as Map));
           return;
         }
-        final error = data['error'] is Map
-            ? Map<String, dynamic>.from(data['error'] as Map)
-            : data;
         completer.completeError(
           ChatSocketException(
-            error['code']?.toString() ?? 'INTERNAL_ERROR',
-            error['message']?.toString() ?? 'Chat request failed',
+            data['code']?.toString() ?? 'CHAT_ERROR',
+            data['message']?.toString() ?? 'Chat request failed',
           ),
         );
       },
@@ -261,7 +243,6 @@ class ChatSocketService {
     _connectionController.close();
     _messageController.close();
     _conversationController.close();
-    _receiptController.close();
     _typingController.close();
     _errorController.close();
   }

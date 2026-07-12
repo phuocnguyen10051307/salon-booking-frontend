@@ -23,8 +23,6 @@ class ChatRepository {
   }) => api.getMessages(conversationId, before: before, limit: limit);
 
   Future<MessageReadReceipt> markRead(String conversationId, String messageId) {
-    return socket.isConnected
-        ? socket.markRead(conversationId, messageId)
-        : api.markRead(conversationId, messageId);
+    return api.markRead(conversationId, messageId);
   }
 }

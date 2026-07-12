@@ -1,5 +1,3 @@
-enum MessageDeliveryStatus { sending, sent, failed }
-
 class ChatUserModel {
   final String? id;
   final String displayName;
@@ -26,22 +24,18 @@ class ChatUserModel {
 class ChatMessageModel {
   final String id;
   final String conversationId;
-  final String clientMessageId;
   final String content;
   final String senderRole;
   final ChatUserModel sender;
   final DateTime createdAt;
-  final MessageDeliveryStatus deliveryStatus;
 
   const ChatMessageModel({
     required this.id,
     required this.conversationId,
-    required this.clientMessageId,
     required this.content,
     required this.senderRole,
     required this.sender,
     required this.createdAt,
-    this.deliveryStatus = MessageDeliveryStatus.sent,
   });
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
@@ -50,10 +44,6 @@ class ChatMessageModel {
       conversationId:
           json['conversationId']?.toString() ??
           json['conversation_id']?.toString() ??
-          '',
-      clientMessageId:
-          json['clientMessageId']?.toString() ??
-          json['client_message_id']?.toString() ??
           '',
       content:
           json['content']?.toString() ??
@@ -81,22 +71,6 @@ class ChatMessageModel {
             json['createdAt']?.toString() ?? json['sent_at']?.toString() ?? '',
           )?.toLocal() ??
           DateTime.now(),
-    );
-  }
-
-  ChatMessageModel copyWith({
-    String? id,
-    MessageDeliveryStatus? deliveryStatus,
-  }) {
-    return ChatMessageModel(
-      id: id ?? this.id,
-      conversationId: conversationId,
-      clientMessageId: clientMessageId,
-      content: content,
-      senderRole: senderRole,
-      sender: sender,
-      createdAt: createdAt,
-      deliveryStatus: deliveryStatus ?? this.deliveryStatus,
     );
   }
 }

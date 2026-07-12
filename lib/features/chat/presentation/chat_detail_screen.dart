@@ -79,11 +79,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Future<void> _send() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
-    _messageController.clear();
+    final chat = context.read<ChatProvider>();
+    if (text.isEmpty || chat.isSending(widget.conversationId)) return;
     _stopTyping();
-    await context.read<ChatProvider>().sendMessage(widget.conversationId, text);
-    _scrollToBottom();
+    final accepted = await chat.sendMessage(widget.conversationId, text);
+    if (!mounted) return;
+    if (accepted && _messageController.text.trim() == text) {
+      _messageController.clear();
+      _scrollToBottom();
+    }
   }
 
   void _scrollToBottom() {
@@ -147,7 +151,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               onSend: _send,
               enabled:
                   chat.connectionStatus == ChatConnectionStatus.connected &&
-                  chat.authError == null,
+                  chat.authError == null &&
+                  !chat.isSending(widget.conversationId),
             ),
           ],
         );
@@ -224,17 +229,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             : conversation?.readSummary.customerReadAt;
         final seen =
             mine &&
-            message.clientMessageId == latestMine.clientMessageId &&
+            message.id == latestMine.id &&
             oppositeReadAt != null &&
             !oppositeReadAt.isBefore(message.createdAt);
-        return _MessageBubble(
-          message: message,
-          mine: mine,
-          seen: seen,
-          onRetry: message.deliveryStatus == MessageDeliveryStatus.failed
-              ? () => chat.retryMessage(message)
-              : null,
-        );
+        return _MessageBubble(message: message, mine: mine, seen: seen);
       },
     );
   }
@@ -297,13 +295,11 @@ class _MessageBubble extends StatelessWidget {
   final ChatMessageModel message;
   final bool mine;
   final bool seen;
-  final VoidCallback? onRetry;
 
   const _MessageBubble({
     required this.message,
     required this.mine,
     required this.seen,
-    this.onRetry,
   });
 
   @override
@@ -345,17 +341,7 @@ class _MessageBubble extends StatelessWidget {
               ),
               if (mine) ...[
                 const SizedBox(width: 4),
-                Icon(
-                  message.deliveryStatus == MessageDeliveryStatus.sending
-                      ? Icons.schedule
-                      : message.deliveryStatus == MessageDeliveryStatus.failed
-                      ? Icons.error_outline
-                      : Icons.done,
-                  size: 13,
-                  color: message.deliveryStatus == MessageDeliveryStatus.failed
-                      ? Colors.orange.shade200
-                      : Colors.white70,
-                ),
+                const Icon(Icons.done, size: 13, color: Colors.white70),
               ],
             ],
           ),
@@ -372,21 +358,13 @@ class _MessageBubble extends StatelessWidget {
               ? CrossAxisAlignment.end
               : CrossAxisAlignment.start,
           children: [
-            onRetry == null ? bubble : InkWell(onTap: onRetry, child: bubble),
+            bubble,
             if (seen)
               const Padding(
                 padding: EdgeInsets.only(top: 2, right: 4),
                 child: Text(
                   'Seen',
                   style: TextStyle(fontSize: 10, color: Colors.grey),
-                ),
-              ),
-            if (onRetry != null)
-              const Padding(
-                padding: EdgeInsets.only(top: 2, right: 4),
-                child: Text(
-                  'Not sent · tap to retry',
-                  style: TextStyle(fontSize: 10, color: Colors.redAccent),
                 ),
               ),
           ],

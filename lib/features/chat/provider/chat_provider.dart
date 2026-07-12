@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -21,6 +20,7 @@ class ChatProvider extends ChangeNotifier {
   final Set<String> _loadingConversations = {};
   final Set<String> _typingConversationIds = {};
   final Set<String> _openConversationIds = {};
+  final Set<String> _sendingConversationIds = {};
   String? _nextConversationCursor;
   bool _hasNextConversationPage = false;
   bool isLoadingConversations = false;
@@ -45,7 +45,6 @@ class ChatProvider extends ChangeNotifier {
       }),
       socket.messages.listen(_mergeIncomingMessage),
       socket.conversations.listen(_mergeSocketConversation),
-      socket.receipts.listen(_applyReceipt),
       socket.typingEvents.listen((event) {
         if (event.isTyping) {
           _typingConversationIds.add(event.conversationId);
@@ -84,6 +83,8 @@ class ChatProvider extends ChangeNotifier {
       _hasMoreMessages[conversationId] ?? false;
   bool isSomeoneTyping(String conversationId) =>
       _typingConversationIds.contains(conversationId);
+  bool isSending(String conversationId) =>
+      _sendingConversationIds.contains(conversationId);
 
   void syncSession(UserModel? user, String? token) {
     if (_user?.id == user?.id && _token == token) return;
@@ -106,6 +107,7 @@ class ChatProvider extends ChangeNotifier {
     _nextBefore.clear();
     _typingConversationIds.clear();
     _openConversationIds.clear();
+    _sendingConversationIds.clear();
     _nextConversationCursor = null;
     _hasNextConversationPage = false;
     errorMessage = null;
@@ -226,54 +228,27 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  String _newClientMessageId() {
-    final random = Random.secure().nextInt(1 << 32).toRadixString(16);
-    return '${_user?.id ?? 'anonymous'}-${DateTime.now().microsecondsSinceEpoch}-$random';
-  }
-
-  Future<void> sendMessage(String conversationId, String content) async {
+  Future<bool> sendMessage(String conversationId, String content) async {
     final normalized = content.trim();
-    if (normalized.isEmpty || _user == null) return;
-    final clientMessageId = _newClientMessageId();
-    final optimistic = ChatMessageModel(
-      id: 'pending:$clientMessageId',
-      conversationId: conversationId,
-      clientMessageId: clientMessageId,
-      content: normalized,
-      senderRole: currentRole,
-      sender: ChatUserModel(
-        id: _user!.id,
-        displayName: _user!.displayName ?? 'You',
-        avatarUrl: _user!.avatarUrl,
-        role: currentRole,
-      ),
-      createdAt: DateTime.now(),
-      deliveryStatus: MessageDeliveryStatus.sending,
-    );
-    _mergeMessage(optimistic);
-    await _sendOptimistic(optimistic);
-  }
-
-  Future<void> retryMessage(ChatMessageModel message) async {
-    _replaceMessage(
-      message.copyWith(deliveryStatus: MessageDeliveryStatus.sending),
-    );
-    await _sendOptimistic(message);
-  }
-
-  Future<void> _sendOptimistic(ChatMessageModel optimistic) async {
+    if (normalized.isEmpty || _user == null || isSending(conversationId)) {
+      return false;
+    }
+    _sendingConversationIds.add(conversationId);
+    errorMessage = null;
+    notifyListeners();
     try {
-      final canonical = await repository.socket.sendMessage(
-        conversationId: optimistic.conversationId,
-        clientMessageId: optimistic.clientMessageId,
-        content: optimistic.content,
+      final message = await repository.socket.sendMessage(
+        conversationId: conversationId,
+        content: normalized,
       );
-      _mergeMessage(canonical);
+      _mergeMessage(message, notify: false);
+      _upsertConversationMessage(message);
+      return true;
     } catch (error) {
-      _replaceMessage(
-        optimistic.copyWith(deliveryStatus: MessageDeliveryStatus.failed),
-      );
       errorMessage = error.toString();
+      return false;
+    } finally {
+      _sendingConversationIds.remove(conversationId);
       notifyListeners();
     }
   }
@@ -312,23 +287,19 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void _mergeIncomingMessage(ChatMessageModel message) {
-    _mergeMessage(message, notify: false);
-    _upsertConversationMessage(message);
-    if (message.sender.id != currentUserId &&
+    final isNew = _mergeMessage(message, notify: false);
+    if (isNew) _upsertConversationMessage(message);
+    if (isNew &&
+        message.sender.id != currentUserId &&
         _openConversationIds.contains(message.conversationId)) {
       unawaited(markLatestRead(message.conversationId));
     }
     notifyListeners();
   }
 
-  void _mergeMessage(ChatMessageModel message, {bool notify = true}) {
+  bool _mergeMessage(ChatMessageModel message, {bool notify = true}) {
     final list = _messages.putIfAbsent(message.conversationId, () => []);
-    final index = list.indexWhere(
-      (item) =>
-          item.id == message.id ||
-          (message.clientMessageId.isNotEmpty &&
-              item.clientMessageId == message.clientMessageId),
-    );
+    final index = list.indexWhere((item) => item.id == message.id);
     if (index >= 0) {
       list[index] = message;
     } else {
@@ -339,16 +310,7 @@ class ChatProvider extends ChangeNotifier {
       return byTime != 0 ? byTime : a.id.compareTo(b.id);
     });
     if (notify) notifyListeners();
-  }
-
-  void _replaceMessage(ChatMessageModel message) {
-    final list = _messages[message.conversationId];
-    if (list == null) return;
-    final index = list.indexWhere(
-      (item) => item.clientMessageId == message.clientMessageId,
-    );
-    if (index >= 0) list[index] = message;
-    notifyListeners();
+    return index < 0;
   }
 
   void _upsertConversationMessage(ChatMessageModel message) {
@@ -389,17 +351,25 @@ class ChatProvider extends ChangeNotifier {
     );
     if (index >= 0) {
       final current = _conversations[index];
+      final isNewIncoming =
+          conversation.lastMessage != null &&
+          conversation.lastMessage?.id != current.lastMessage?.id &&
+          conversation.lastMessage?.sender.id != currentUserId;
       _mergeConversation(
-        conversation.copyWith(unreadCount: current.unreadCount),
+        conversation.copyWith(
+          unreadCount: current.unreadCount + (isNewIncoming ? 1 : 0),
+        ),
       );
       return;
     }
-    final hasIncoming = (_messages[conversation.id] ?? const []).any(
-      (message) => message.sender.id != currentUserId,
-    );
+    final hasIncoming =
+        conversation.lastMessage != null &&
+        conversation.lastMessage?.sender.id != currentUserId;
     _mergeConversation(
       conversation.copyWith(
-        unreadCount: hasIncoming ? 1 : conversation.unreadCount,
+        unreadCount: hasIncoming && conversation.unreadCount == 0
+            ? 1
+            : conversation.unreadCount,
       ),
     );
   }
