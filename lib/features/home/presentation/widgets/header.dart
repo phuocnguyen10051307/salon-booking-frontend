@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 class HomeHeader extends StatelessWidget {
   final String? displayName;
 
-  const HomeHeader({Key? key, this.displayName}) : super(key: key);
+  const HomeHeader({super.key, this.displayName});
 
   @override
   Widget build(BuildContext context) {

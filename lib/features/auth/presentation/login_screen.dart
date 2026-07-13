@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/themes/app_colors.dart';
-import '../../../../core/widgets/custom_button.dart';
-import '../../../../core/widgets/custom_text_field.dart';
-import '../../../features/home/presentation/home_screen.dart';
-import '../../../../core/widgets/social_button.dart';
+import '../../../core/themes/app_colors.dart';
+import '../../../core/widgets/custom_button.dart';
+import '../../../core/widgets/custom_text_field.dart';
+import '../../home/presentation/home_screen.dart';
+import '../../../core/widgets/social_button.dart';
 import '../provider/auth_provider.dart';
+import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -77,7 +78,14 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordScreen(),
+                      ),
+                    );
+                  },
                   child: const Text(
                     "Quên mật khẩu?",
                     style: TextStyle(color: AppColors.primary),

@@ -1,30 +1,49 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:salon_booking_frontend/main.dart';
+import 'package:salon_booking_frontend/features/chat/data/models/chat_models.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  test('chat message parses canonical backend response', () {
+    final message = ChatMessageModel.fromJson({
+      'id': 'message-1',
+      'conversationId': 'conversation-1',
+      'content': 'Hello',
+      'senderRole': 'STAFF',
+      'sender': {
+        'id': 'staff-1',
+        'displayName': 'Staff member',
+        'avatarUrl': null,
+        'role': 'STAFF',
+      },
+      'createdAt': '2026-07-03T12:00:00.000Z',
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(message.id, 'message-1');
+    expect(message.sender.role, 'STAFF');
+    expect(message.content, 'Hello');
+    expect(message.createdAt.isUtc, isFalse);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  test('conversation parses unread and read summary state', () {
+    final conversation = ChatConversationModel.fromJson({
+      'id': 'conversation-1',
+      'title': 'Customer',
+      'customer': {
+        'id': 'customer-1',
+        'displayName': 'Customer',
+        'avatarUrl': null,
+        'role': 'CUSTOMER',
+      },
+      'lastMessage': null,
+      'unreadCount': 3,
+      'lastActivityAt': '2026-07-03T12:00:00.000Z',
+      'readSummary': {
+        'customerReadAt': '2026-07-03T11:59:00.000Z',
+        'staffReadAt': null,
+      },
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(conversation.unreadCount, 3);
+    expect(conversation.customer.id, 'customer-1');
+    expect(conversation.readSummary.customerReadAt, isNotNull);
   });
 }

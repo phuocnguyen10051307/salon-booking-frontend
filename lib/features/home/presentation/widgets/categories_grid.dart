@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../store/presentation/store_list_screen.dart';
 
 class CategoriesGrid extends StatelessWidget {
-  const CategoriesGrid({Key? key}) : super(key: key);
+  const CategoriesGrid({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +14,7 @@ class CategoriesGrid extends StatelessWidget {
       'Nails',
       'Facial',
       'Coloring',
-      'Spa',
+      'Hair Care',
       'Waxing',
       'Makeup',
       'Massage',
@@ -37,25 +38,35 @@ class CategoriesGrid extends StatelessWidget {
       mainAxisSpacing: 12,
       childAspectRatio: 0.9,
       children: List.generate(items.length, (index) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: lightTeal,
-                shape: BoxShape.circle,
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => StoreListScreen(categoryName: items[index]),
               ),
-              child: Icon(icons[index], color: darkTeal, size: 28),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              items[index],
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(fontSize: 12),
-            ),
-          ],
+            );
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: lightTeal,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icons[index], color: darkTeal, size: 28),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                items[index],
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(fontSize: 12),
+              ),
+            ],
+          ),
         );
       }),
     );

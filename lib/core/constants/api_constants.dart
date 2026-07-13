@@ -1,8 +1,49 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
+
 class ApiConstants {
-  static const String baseUrl = 'http://10.0.2.2:3000/v1';
+  static String get baseUrl => _platformUrl('API_BASE_URL');
+  static String get socketBaseUrl => _platformUrl('SOCKET_BASE_URL');
+
+  static String _platformUrl(String key) {
+    final platformKey =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+        ? '${key}_ANDROID'
+        : '${key}_WEB';
+    final value = dotenv.env[platformKey]?.trim();
+    if (value != null && value.isNotEmpty) return _normalize(value);
+    return _requiredUrl(key);
+  }
+
+  static String _requiredUrl(String key) {
+    final value = dotenv.env[key]?.trim();
+    if (value == null || value.isEmpty) {
+      throw StateError('$key must be configured in .env');
+    }
+    return _normalize(value);
+  }
+
+  static String _normalize(String value) =>
+      value.replaceFirst(RegExp(r'/$'), '');
 
   static const String login = '/auth/signin';
   static const String signup = '/auth/signup';
+  static const String verifySignupOtp = '/auth/verify-signup-otp';
+  static const String resendSignupOtp = '/auth/resend-signup-otp';
   static const String me = '/auth/me';
   static const String signout = '/auth/signout';
+  static const String userProfile = '/users/profile';
+  static const String changePassword = '/users/change-password';
+  static const String services = '/services';
+  static const String cart = '/cart';
+  static const String cartItems = '/cart/items';
+  static const String bookings = '/bookings';
+  static const String bookingsCheckout = '/bookings/checkout';
+  static const String billing = '/billing';
+  static const String reviews = '/reviews';
+  static const String stylists = '/stylists';
+  static const String staffTodayBookings = '/bookings/staff/today';
+  static const String chatConversations = '/chat/conversations';
+  static const String locations = '/locations';
+  static const String locationsMap = '/locations/map';
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class PromoBanner extends StatelessWidget {
-  const PromoBanner({Key? key}) : super(key: key);
+  const PromoBanner({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +23,7 @@ class PromoBanner extends StatelessWidget {
                   ),
                   fit: BoxFit.cover,
                   colorFilter: ColorFilter.mode(
-                    Colors.black.withOpacity(0.25),
+                    Colors.black.withValues(alpha: 0.25),
                     BlendMode.darken,
                   ),
                 ),
