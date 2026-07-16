@@ -41,6 +41,8 @@ class ApiConstants {
   static const String bookingsCheckout = '/bookings/checkout';
   static const String billing = '/billing';
   static const String reviews = '/reviews';
+  static const String promotions = '/promotions';
+  static const String activePromotions = '$promotions/active';
   static const String stylists = '/stylists';
   static const String staffTodayBookings = '/bookings/staff/today';
   static const String chatConversations = '/chat/conversations';

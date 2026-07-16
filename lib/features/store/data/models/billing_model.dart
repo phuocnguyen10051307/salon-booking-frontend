@@ -1,4 +1,5 @@
 import 'booking_model.dart';
+import 'promotion_model.dart';
 
 class BillingModel {
   final String id;
@@ -10,6 +11,7 @@ class BillingModel {
   final String paymentMethod;
   final String status;
   final BookingModel? booking;
+  final PromotionModel? promotion;
 
   const BillingModel({
     required this.id,
@@ -21,20 +23,29 @@ class BillingModel {
     required this.paymentMethod,
     required this.status,
     this.booking,
+    this.promotion,
   });
 
   factory BillingModel.fromJson(Map<String, dynamic> json) {
     final booking = json['bookings'];
+    final promotion = json['promotions'];
     return BillingModel(
       id: json['billing_id']?.toString() ?? '',
       code: json['billing_code']?.toString() ?? '',
       bookingId: json['booking_id']?.toString() ?? '',
       subtotal: double.tryParse(json['subtotal']?.toString() ?? '0') ?? 0,
-      discountAmount: double.tryParse(json['discount_amount']?.toString() ?? '0') ?? 0,
-      totalAmount: double.tryParse(json['total_amount']?.toString() ?? '0') ?? 0,
+      discountAmount:
+          double.tryParse(json['discount_amount']?.toString() ?? '0') ?? 0,
+      totalAmount:
+          double.tryParse(json['total_amount']?.toString() ?? '0') ?? 0,
       paymentMethod: json['payment_method']?.toString() ?? 'CASH',
       status: json['status']?.toString() ?? 'UNPAID',
-      booking: booking is Map ? BookingModel.fromJson(Map<String, dynamic>.from(booking)) : null,
+      booking: booking is Map
+          ? BookingModel.fromJson(Map<String, dynamic>.from(booking))
+          : null,
+      promotion: promotion is Map
+          ? PromotionModel.fromJson(Map<String, dynamic>.from(promotion))
+          : null,
     );
   }
 }

@@ -1,93 +1,131 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../store/data/models/promotion_model.dart';
+
 class PromoBanner extends StatelessWidget {
-  const PromoBanner({super.key});
+  final List<PromotionModel> promotions;
+  final VoidCallback onExplore;
+
+  const PromoBanner({
+    super.key,
+    required this.promotions,
+    required this.onExplore,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final orange = const Color(0xFFFF7043);
-    final cream = const Color(0xFFFFF8E1);
+    if (promotions.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
-      height: 160,
-      child: Stack(
+      height: 170,
+      child: PageView.builder(
+        itemCount: promotions.length,
+        padEnds: false,
+        itemBuilder: (context, index) {
+          final promotion = promotions[index];
+          return Padding(
+            padding: EdgeInsets.only(
+              right: index == promotions.length - 1 ? 0 : 10,
+            ),
+            child: _PromotionCard(promotion: promotion, onExplore: onExplore),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PromotionCard extends StatelessWidget {
+  final PromotionModel promotion;
+  final VoidCallback onExplore;
+
+  const _PromotionCard({required this.promotion, required this.onExplore});
+
+  @override
+  Widget build(BuildContext context) {
+    const orange = Color(0xFFFF7043);
+    const cream = Color(0xFFFFF8E1);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF004D40), Color(0xFF26A69A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(
-                    'https://picsum.photos/800/400?grayscale&blur=2',
-                  ),
-                  fit: BoxFit.cover,
-                  colorFilter: ColorFilter.mode(
-                    Colors.black.withValues(alpha: 0.25),
-                    BlendMode.darken,
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  promotion.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Look more beautiful and save more discount',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: cream,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Text(
-                            'Get offer now!',
-                            style: TextStyle(
-                              color: orange,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                const SizedBox(height: 5),
+                Text(
+                  promotion.description ?? 'Save on your next salon booking.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.openSans(
+                    color: Colors.white.withValues(alpha: 0.86),
+                    height: 1.3,
                   ),
-                  Container(
-                    width: 84,
-                    height: 84,
-                    decoration: BoxDecoration(
-                      color: orange,
-                      shape: BoxShape.circle,
+                ),
+                const SizedBox(height: 11),
+                InkWell(
+                  onTap: onExplore,
+                  borderRadius: BorderRadius.circular(18),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
                     ),
-                    child: Center(
-                      child: Text(
-                        'Up to\n50%',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    decoration: BoxDecoration(
+                      color: cream,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Text(
+                      'Explore services',
+                      style: TextStyle(
+                        color: orange,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 82,
+            height: 82,
+            decoration: const BoxDecoration(
+              color: orange,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '${promotion.discountPercent}%\nOFF',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                height: 1.1,
               ),
             ),
           ),

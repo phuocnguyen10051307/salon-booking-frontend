@@ -15,6 +15,7 @@ import '../../store/presentation/cart_screen.dart';
 import '../../store/presentation/store_detail_screen.dart';
 import '../../store/provider/cart_provider.dart';
 import '../../store/provider/service_provider.dart';
+import '../../store/provider/promotion_provider.dart';
 import '../data/models/salon_location_model.dart';
 import '../provider/home_provider.dart';
 import 'widgets/bottom_nav.dart';
@@ -44,11 +45,14 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _selectedIndex = widget.initialIndex;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final role = _normalizedRole(context.read<AuthProvider>().currentUser?.role);
+      final role = _normalizedRole(
+        context.read<AuthProvider>().currentUser?.role,
+      );
       if (role == 'CUSTOMER') {
         context.read<HomeProvider>().fetchLocation();
         context.read<ServiceProvider>().fetchServices();
         context.read<CartProvider>().fetchCart();
+        context.read<PromotionProvider>().fetchActivePromotions();
       }
     });
   }
@@ -127,8 +131,20 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 14),
           _CustomerSearch(),
           const SizedBox(height: 18),
-          const PromoBanner(),
-          const SizedBox(height: 20),
+          Consumer<PromotionProvider>(
+            builder: (context, provider, child) {
+              if (provider.promotions.isEmpty) return const SizedBox.shrink();
+              return Column(
+                children: [
+                  PromoBanner(
+                    promotions: provider.promotions,
+                    onExplore: () => _onNavTap(1),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              );
+            },
+          ),
           const Text(
             'What do you want to do?',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
@@ -202,7 +218,10 @@ class _CustomerExploreTab extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 'Explore',
-                style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700),
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -233,7 +252,8 @@ class _CustomerExploreTab extends StatelessWidget {
               else ...[
                 _ExploreHeroCard(location: location),
                 const SizedBox(height: 16),
-                if (location.latitude != null && location.longitude != null) ...[
+                if (location.latitude != null &&
+                    location.longitude != null) ...[
                   _ExploreEtaCard(provider: provider),
                   const SizedBox(height: 16),
                   _ExploreMapCard(location: location),
@@ -329,16 +349,12 @@ class _ExploreEtaCard extends StatelessWidget {
     final lng = location?.longitude;
     if (lat == null || lng == null) return;
 
-    final uri = Uri.https(
-      'www.google.com',
-      '/maps/dir/',
-      {
-        'api': '1',
-        'destination': '$lat,$lng',
-        'travelmode': 'driving',
-        'dir_action': 'navigate',
-      },
-    );
+    final uri = Uri.https('www.google.com', '/maps/dir/', {
+      'api': '1',
+      'destination': '$lat,$lng',
+      'travelmode': 'driving',
+      'dir_action': 'navigate',
+    });
 
     final opened =
         await launchUrl(uri, mode: LaunchMode.externalApplication) ||
@@ -369,7 +385,9 @@ class _ExploreEtaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasEta = provider.routeDurationSeconds != null && provider.routeDistanceMeters != null;
+    final hasEta =
+        provider.routeDurationSeconds != null &&
+        provider.routeDistanceMeters != null;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -386,11 +404,16 @@ class _ExploreEtaCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Trip estimate',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 18),
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                  ),
                 ),
               ),
               OutlinedButton.icon(
-                onPressed: provider.isRouteLoading ? null : provider.fetchRouteToSalon,
+                onPressed: provider.isRouteLoading
+                    ? null
+                    : provider.fetchRouteToSalon,
                 icon: provider.isRouteLoading
                     ? const SizedBox(
                         width: 16,
@@ -398,7 +421,9 @@ class _ExploreEtaCard extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.my_location_outlined, size: 18),
-                label: Text(provider.isRouteLoading ? 'Updating' : 'Refresh ETA'),
+                label: Text(
+                  provider.isRouteLoading ? 'Updating' : 'Refresh ETA',
+                ),
               ),
             ],
           ),
@@ -429,7 +454,9 @@ class _ExploreEtaCard extends StatelessWidget {
                 backgroundColor: const Color(0xFF0F766E),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
               icon: const Icon(Icons.navigation_outlined),
               label: Text(
@@ -472,7 +499,10 @@ class _EtaMetric extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value,
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 18),
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+            ),
           ),
         ],
       ),
@@ -520,12 +550,16 @@ class _ExploreMapCard extends StatelessWidget {
                     initialCenter: currentPoint ?? salonPoint,
                     initialZoom: 14,
                     interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.drag | InteractiveFlag.pinchZoom | InteractiveFlag.doubleTapZoom,
+                      flags:
+                          InteractiveFlag.drag |
+                          InteractiveFlag.pinchZoom |
+                          InteractiveFlag.doubleTapZoom,
                     ),
                   ),
                   children: [
                     TileLayer(
-                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       userAgentPackageName: 'com.example.salon_booking_',
                     ),
                     if (provider.routePoints.isNotEmpty)
@@ -549,9 +583,16 @@ class _ExploreMapCard extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF59E0B),
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 3),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 3,
+                                ),
                               ),
-                              child: const Icon(Icons.navigation, color: Colors.white, size: 22),
+                              child: const Icon(
+                                Icons.navigation,
+                                color: Colors.white,
+                                size: 22,
+                              ),
                             ),
                           ),
                         Marker(
@@ -576,10 +617,16 @@ class _ExploreMapCard extends StatelessWidget {
                             borderRadius: BorderRadius.all(Radius.circular(8)),
                           ),
                           child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             child: Text(
                               'OpenStreetMap',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -704,7 +751,9 @@ class _CustomerSearch extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ServiceProvider>(
       builder: (context, provider, child) {
-        final results = provider.searchQuery.trim().isEmpty ? <ServiceModel>[] : provider.searchedServices;
+        final results = provider.searchQuery.trim().isEmpty
+            ? <ServiceModel>[]
+            : provider.searchedServices;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -723,7 +772,9 @@ class _CustomerSearch extends StatelessWidget {
             ),
             if (results.isNotEmpty) ...[
               const SizedBox(height: 12),
-              ...results.take(4).map((service) => _SearchResultTile(service: service)),
+              ...results
+                  .take(4)
+                  .map((service) => _SearchResultTile(service: service)),
             ],
           ],
         );
@@ -771,14 +822,20 @@ class _SearchResultTile extends StatelessWidget {
                     service.categoryName ?? '${service.durationMinutes} mins',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.openSans(color: Colors.grey.shade600, fontSize: 12),
+                    style: GoogleFonts.openSans(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
             ),
             Text(
               formatter.format(service.price),
-              style: GoogleFonts.poppins(color: const Color(0xFF00695C), fontWeight: FontWeight.w700),
+              style: GoogleFonts.poppins(
+                color: const Color(0xFF00695C),
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
@@ -786,4 +843,3 @@ class _SearchResultTile extends StatelessWidget {
     );
   }
 }
-

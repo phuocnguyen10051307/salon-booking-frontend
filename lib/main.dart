@@ -9,6 +9,7 @@ import 'features/home/provider/home_provider.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/store/provider/cart_provider.dart';
 import 'features/store/provider/service_provider.dart';
+import 'features/store/provider/promotion_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +32,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => HomeProvider()),
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => PromotionProvider()),
       ],
       child: const MyApp(),
     ),
