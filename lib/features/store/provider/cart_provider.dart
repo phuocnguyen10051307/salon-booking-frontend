@@ -42,12 +42,18 @@ class CartProvider extends ChangeNotifier {
   Future<void> fetchStylistsForServices(List<String> serviceIds) async {
     await _run(() async {
       final stylists = await _cartApi.getStylists();
-      final activeStylists = stylists.where((stylist) => stylist.isActive).toList();
+      final activeStylists = stylists
+          .where((stylist) => stylist.isActive)
+          .toList();
       final matchingStylists = activeStylists.where((stylist) {
-        return serviceIds.every((serviceId) => stylist.serviceIds.contains(serviceId));
+        return serviceIds.every(
+          (serviceId) => stylist.serviceIds.contains(serviceId),
+        );
       }).toList();
 
-      _stylists = matchingStylists.isNotEmpty ? matchingStylists : activeStylists;
+      _stylists = matchingStylists.isNotEmpty
+          ? matchingStylists
+          : activeStylists;
     });
   }
 
@@ -86,6 +92,7 @@ class CartProvider extends ChangeNotifier {
     String? stylistId,
     List<String> selectedItemIds = const [],
     String? note,
+    String? promotionId,
   }) async {
     final success = await _run(() async {
       final result = await _cartApi.checkout(
@@ -94,6 +101,7 @@ class CartProvider extends ChangeNotifier {
         stylistId: stylistId,
         selectedItemIds: selectedItemIds,
         note: note,
+        promotionId: promotionId,
       );
       _latestBooking = result.booking;
       _latestBilling = result.billing;
@@ -103,7 +111,10 @@ class CartProvider extends ChangeNotifier {
     return success ? _latestBilling : null;
   }
 
-  Future<BillingModel?> payBilling({required String billingId, required String paymentMethod}) async {
+  Future<BillingModel?> payBilling({
+    required String billingId,
+    required String paymentMethod,
+  }) async {
     final success = await _run(() async {
       _latestBilling = await _cartApi.payBilling(
         billingId: billingId,

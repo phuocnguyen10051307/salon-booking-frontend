@@ -38,7 +38,10 @@ class BillingScreen extends StatelessWidget {
       body: Consumer<CartProvider>(
         builder: (context, provider, child) {
           final latestBilling = provider.latestBilling;
-          final currentBilling = latestBilling != null && latestBilling.id == billing.id ? latestBilling : billing;
+          final currentBilling =
+              latestBilling != null && latestBilling.id == billing.id
+              ? latestBilling
+              : billing;
           final isPaid = currentBilling.status == 'PAID';
 
           return ListView(
@@ -78,12 +81,19 @@ class BillingScreen extends StatelessWidget {
                       label: 'Subtotal',
                       value: currencyFormatter.format(currentBilling.subtotal),
                     ),
+                    if (currentBilling.promotion != null) ...[
+                      const SizedBox(height: 10),
+                      _AmountRow(
+                        label: 'Promotion',
+                        value:
+                            '${currentBilling.promotion!.title} (${currentBilling.promotion!.discountPercent}% off)',
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     _AmountRow(
                       label: 'Discount',
-                      value: currencyFormatter.format(
-                        currentBilling.discountAmount,
-                      ),
+                      value:
+                          '-${currencyFormatter.format(currentBilling.discountAmount)}',
                     ),
                     const Divider(height: 28),
                     _AmountRow(
@@ -110,7 +120,9 @@ class BillingScreen extends StatelessWidget {
                     const SizedBox(height: 14),
                     _AmountRow(
                       label: 'Payment',
-                      value: isPaid ? currentBilling.paymentMethod : 'Pay at salon after service',
+                      value: isPaid
+                          ? currentBilling.paymentMethod
+                          : 'Pay at salon after service',
                     ),
                   ],
                 ),
@@ -144,7 +156,9 @@ class _ReviewSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final booking = billing.booking!;
-    final reviewsByServiceId = {for (final review in booking.reviews) review.serviceId: review};
+    final reviewsByServiceId = {
+      for (final review in booking.reviews) review.serviceId: review,
+    };
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -219,7 +233,9 @@ class _ReviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            serviceItem.serviceName.isEmpty ? 'Service' : serviceItem.serviceName,
+            serviceItem.serviceName.isEmpty
+                ? 'Service'
+                : serviceItem.serviceName,
             style: GoogleFonts.poppins(
               fontWeight: FontWeight.w700,
               color: Colors.black87,
@@ -239,7 +255,8 @@ class _ReviewCard extends StatelessWidget {
               );
             }),
           ),
-          if (review?.comment != null && review!.comment!.trim().isNotEmpty) ...[
+          if (review?.comment != null &&
+              review!.comment!.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
               review!.comment!,
@@ -254,7 +271,11 @@ class _ReviewCard extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
               onPressed: () => _showReviewDialog(context),
-              icon: Icon(review == null ? Icons.rate_review_outlined : Icons.edit_outlined),
+              icon: Icon(
+                review == null
+                    ? Icons.rate_review_outlined
+                    : Icons.edit_outlined,
+              ),
               label: Text(review == null ? 'Rate now' : 'Edit review'),
             ),
           ),
@@ -299,7 +320,9 @@ class _ReviewDialogState extends State<_ReviewDialog> {
   void initState() {
     super.initState();
     _rating = widget.initialReview?.rating ?? 5;
-    _commentController = TextEditingController(text: widget.initialReview?.comment ?? '');
+    _commentController = TextEditingController(
+      text: widget.initialReview?.comment ?? '',
+    );
   }
 
   @override
@@ -312,7 +335,9 @@ class _ReviewDialogState extends State<_ReviewDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(
-        widget.serviceItem.serviceName.isEmpty ? 'Review service' : widget.serviceItem.serviceName,
+        widget.serviceItem.serviceName.isEmpty
+            ? 'Review service'
+            : widget.serviceItem.serviceName,
         style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
       ),
       content: SingleChildScrollView(
@@ -330,9 +355,13 @@ class _ReviewDialogState extends State<_ReviewDialog> {
               children: List.generate(5, (index) {
                 final star = index + 1;
                 return IconButton(
-                  onPressed: _submitting ? null : () => setState(() => _rating = star),
+                  onPressed: _submitting
+                      ? null
+                      : () => setState(() => _rating = star),
                   icon: Icon(
-                    star <= _rating ? Icons.star_rounded : Icons.star_border_rounded,
+                    star <= _rating
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
                     color: Colors.amber,
                   ),
                 );

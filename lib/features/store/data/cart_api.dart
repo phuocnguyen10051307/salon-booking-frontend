@@ -23,7 +23,8 @@ class CartApi {
 
   Future<List<StylistModel>> getStylists() async {
     final response = await ApiClient.dio.get(ApiConstants.stylists);
-    final rawStylists = response.data['data']?['stylists'] ?? response.data['stylists'];
+    final rawStylists =
+        response.data['data']?['stylists'] ?? response.data['stylists'];
     if (rawStylists is List) {
       return rawStylists
           .whereType<Map>()
@@ -35,7 +36,8 @@ class CartApi {
 
   Future<List<BillingModel>> getBillings() async {
     final response = await ApiClient.dio.get(ApiConstants.billing);
-    final rawBillings = response.data['data']?['billings'] ?? response.data['billings'];
+    final rawBillings =
+        response.data['data']?['billings'] ?? response.data['billings'];
     if (rawBillings is List) {
       return rawBillings
           .whereType<Map>()
@@ -45,7 +47,10 @@ class CartApi {
     return const [];
   }
 
-  Future<CartItemModel> addCartItem({required String serviceId, int quantity = 1}) async {
+  Future<CartItemModel> addCartItem({
+    required String serviceId,
+    int quantity = 1,
+  }) async {
     final response = await ApiClient.dio.post(
       ApiConstants.cartItems,
       data: {'service_id': serviceId, 'quantity': quantity},
@@ -54,7 +59,10 @@ class CartApi {
     return CartItemModel.fromJson(Map<String, dynamic>.from(item as Map));
   }
 
-  Future<CartItemModel> updateCartItem({required String itemId, required int quantity}) async {
+  Future<CartItemModel> updateCartItem({
+    required String itemId,
+    required int quantity,
+  }) async {
     final response = await ApiClient.dio.put(
       '${ApiConstants.cartItems}/$itemId',
       data: {'quantity': quantity},
@@ -77,16 +85,18 @@ class CartApi {
     String? stylistId,
     List<String> selectedItemIds = const [],
     String? note,
+    String? promotionId,
   }) async {
     final response = await ApiClient.dio.post(
       ApiConstants.bookingsCheckout,
-      data: {
-        'booking_date': _formatDate(bookingDate),
-        'booking_time': bookingTime,
-        if (stylistId != null && stylistId.isNotEmpty) 'stylist_id': stylistId,
-        if (selectedItemIds.isNotEmpty) 'cart_item_ids': selectedItemIds,
-        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
-      },
+      data: buildCheckoutPayload(
+        bookingDate: bookingDate,
+        bookingTime: bookingTime,
+        stylistId: stylistId,
+        selectedItemIds: selectedItemIds,
+        note: note,
+        promotionId: promotionId,
+      ),
     );
 
     final data = response.data['data'] as Map? ?? const {};
@@ -99,12 +109,16 @@ class CartApi {
     );
   }
 
-  Future<BillingModel> payBilling({required String billingId, required String paymentMethod}) async {
+  Future<BillingModel> payBilling({
+    required String billingId,
+    required String paymentMethod,
+  }) async {
     final response = await ApiClient.dio.patch(
       '${ApiConstants.billing}/$billingId/pay',
       data: {'payment_method': paymentMethod},
     );
-    final billing = response.data['data']?['billing'] ?? response.data['billing'];
+    final billing =
+        response.data['data']?['billing'] ?? response.data['billing'];
     return BillingModel.fromJson(Map<String, dynamic>.from(billing as Map));
   }
 
@@ -119,16 +133,33 @@ class CartApi {
       data: {
         'service_id': serviceId,
         'rating': rating,
-        if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
+        if (comment != null && comment.trim().isNotEmpty)
+          'comment': comment.trim(),
       },
     );
     final review = response.data['data']?['review'] ?? response.data['review'];
     return ReviewModel.fromJson(Map<String, dynamic>.from(review as Map));
   }
+}
 
-  String _formatDate(DateTime date) {
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    return '${date.year}-$month-$day';
-  }
+Map<String, dynamic> buildCheckoutPayload({
+  required DateTime bookingDate,
+  required String bookingTime,
+  String? stylistId,
+  List<String> selectedItemIds = const [],
+  String? note,
+  String? promotionId,
+}) {
+  final month = bookingDate.month.toString().padLeft(2, '0');
+  final day = bookingDate.day.toString().padLeft(2, '0');
+
+  return {
+    'booking_date': '${bookingDate.year}-$month-$day',
+    'booking_time': bookingTime,
+    if (stylistId != null && stylistId.isNotEmpty) 'stylist_id': stylistId,
+    if (selectedItemIds.isNotEmpty) 'cart_item_ids': selectedItemIds,
+    if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+    if (promotionId != null && promotionId.isNotEmpty)
+      'promotion_id': promotionId,
+  };
 }

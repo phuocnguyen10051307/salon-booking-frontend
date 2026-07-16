@@ -6,7 +6,9 @@ import 'package:provider/provider.dart';
 import '../data/models/billing_model.dart';
 import '../data/models/cart_item_model.dart';
 import '../data/models/stylist_model.dart';
+import '../data/models/promotion_model.dart';
 import '../provider/cart_provider.dart';
+import '../provider/promotion_provider.dart';
 import 'billing_screen.dart';
 
 class CartScreen extends StatelessWidget {
@@ -104,15 +106,22 @@ class _CartContentState extends State<CartContent> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'd');
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: 'd',
+    );
 
     return Consumer<CartProvider>(
       builder: (context, provider, child) {
-        if (provider.isLoading && provider.cart.items.isEmpty && provider.billings.isEmpty) {
+        if (provider.isLoading &&
+            provider.cart.items.isEmpty &&
+            provider.billings.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (provider.error != null && provider.cart.items.isEmpty && provider.billings.isEmpty) {
+        if (provider.error != null &&
+            provider.cart.items.isEmpty &&
+            provider.billings.isEmpty) {
           return Center(
             child: _RequestErrorCard(
               message: provider.error!,
@@ -124,11 +133,23 @@ class _CartContentState extends State<CartContent> {
         final items = provider.cart.items;
         _syncSelection(items);
         final selectedItems = _selectedItems(items);
-        final selectedCount = selectedItems.fold<int>(0, (sum, item) => sum + item.quantity);
-        final selectedSubtotal = selectedItems.fold<double>(0, (sum, item) => sum + item.lineTotal);
-        final unpaidBillings = provider.billings.where((item) => item.status == 'UNPAID').toList();
-        final paidBillings = provider.billings.where((item) => item.status == 'PAID').toList();
-        final visibleBillings = _billingFilter == 'PAID' ? paidBillings : unpaidBillings;
+        final selectedCount = selectedItems.fold<int>(
+          0,
+          (sum, item) => sum + item.quantity,
+        );
+        final selectedSubtotal = selectedItems.fold<double>(
+          0,
+          (sum, item) => sum + item.lineTotal,
+        );
+        final unpaidBillings = provider.billings
+            .where((item) => item.status == 'UNPAID')
+            .toList();
+        final paidBillings = provider.billings
+            .where((item) => item.status == 'PAID')
+            .toList();
+        final visibleBillings = _billingFilter == 'PAID'
+            ? paidBillings
+            : unpaidBillings;
 
         return RefreshIndicator(
           onRefresh: _refreshAll,
@@ -148,7 +169,10 @@ class _CartContentState extends State<CartContent> {
               else ...[
                 Text(
                   'Choose services to checkout',
-                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700),
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -163,8 +187,10 @@ class _CartContentState extends State<CartContent> {
                     isSelected: _selectedItemIds.contains(item.id),
                     onTap: () => _openCheckout([item]),
                     onSelected: () => _toggleSelection(item.id),
-                    onMinus: () => provider.updateQuantity(item.id, item.quantity - 1),
-                    onPlus: () => provider.updateQuantity(item.id, item.quantity + 1),
+                    onMinus: () =>
+                        provider.updateQuantity(item.id, item.quantity - 1),
+                    onPlus: () =>
+                        provider.updateQuantity(item.id, item.quantity + 1),
                     onRemove: () => provider.removeItem(item.id),
                   ),
                 ),
@@ -190,9 +216,15 @@ class _CartContentState extends State<CartContent> {
                   ),
                   child: Column(
                     children: [
-                      _TotalRow(label: 'Cart subtotal', value: currencyFormatter.format(provider.cart.subtotal)),
+                      _TotalRow(
+                        label: 'Cart subtotal',
+                        value: currencyFormatter.format(provider.cart.subtotal),
+                      ),
                       const SizedBox(height: 10),
-                      _TotalRow(label: 'Selected subtotal', value: currencyFormatter.format(selectedSubtotal)),
+                      _TotalRow(
+                        label: 'Selected subtotal',
+                        value: currencyFormatter.format(selectedSubtotal),
+                      ),
                       const SizedBox(height: 16),
                       Row(
                         children: [
@@ -201,35 +233,57 @@ class _CartContentState extends State<CartContent> {
                               onPressed: provider.isLoading
                                   ? null
                                   : () async {
-                                      final success = await provider.clearCart();
+                                      final success = await provider
+                                          .clearCart();
                                       if (!context.mounted || success) return;
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text(provider.error ?? 'Can not clear cart.')),
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            provider.error ??
+                                                'Can not clear cart.',
+                                          ),
+                                        ),
                                       );
                                     },
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.redAccent,
                                 minimumSize: const Size.fromHeight(50),
                                 side: const BorderSide(color: Colors.redAccent),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                               ),
-                              child: Text('Clear cart', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                              child: Text(
+                                'Clear cart',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: provider.isLoading || selectedItems.isEmpty ? null : () => _openCheckout(selectedItems),
+                              onPressed:
+                                  provider.isLoading || selectedItems.isEmpty
+                                  ? null
+                                  : () => _openCheckout(selectedItems),
                               icon: const Icon(Icons.receipt_long),
                               label: Text(
                                 'Checkout (${selectedItems.length})',
-                                style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF00695C),
                                 foregroundColor: Colors.white,
                                 minimumSize: const Size.fromHeight(50),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                               ),
                             ),
                           ),
@@ -246,7 +300,8 @@ class _CartContentState extends State<CartContent> {
                 selectedFilter: _billingFilter,
                 billings: visibleBillings,
                 currencyFormatter: currencyFormatter,
-                onFilterChanged: (value) => setState(() => _billingFilter = value),
+                onFilterChanged: (value) =>
+                    setState(() => _billingFilter = value),
                 onOpenBilling: _openBilling,
               ),
             ],
@@ -263,7 +318,8 @@ class CheckoutSelectionScreen extends StatefulWidget {
   const CheckoutSelectionScreen({super.key, required this.items});
 
   @override
-  State<CheckoutSelectionScreen> createState() => _CheckoutSelectionScreenState();
+  State<CheckoutSelectionScreen> createState() =>
+      _CheckoutSelectionScreenState();
 }
 
 class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
@@ -271,6 +327,7 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
   DateTime _bookingDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _bookingTime = const TimeOfDay(hour: 9, minute: 0);
   String? _selectedStylistId;
+  String? _selectedPromotionId;
 
   @override
   void initState() {
@@ -282,6 +339,7 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
           .toSet()
           .toList();
       context.read<CartProvider>().fetchStylistsForServices(serviceIds);
+      context.read<PromotionProvider>().fetchActivePromotions();
     });
   }
 
@@ -302,7 +360,10 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
   }
 
   Future<void> _pickTime() async {
-    final picked = await showTimePicker(context: context, initialTime: _bookingTime);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _bookingTime,
+    );
     if (picked != null) setState(() => _bookingTime = picked);
   }
 
@@ -314,9 +375,12 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
 
   Future<void> _checkout() async {
     final provider = context.read<CartProvider>();
-    if (provider.stylists.isNotEmpty && (_selectedStylistId == null || _selectedStylistId!.isEmpty)) {
+    if (provider.stylists.isNotEmpty &&
+        (_selectedStylistId == null || _selectedStylistId!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please choose a stylist before checkout.')),
+        const SnackBar(
+          content: Text('Please choose a stylist before checkout.'),
+        ),
       );
       return;
     }
@@ -327,12 +391,27 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
       stylistId: _selectedStylistId,
       selectedItemIds: widget.items.map((item) => item.id).toList(),
       note: _noteController.text,
+      promotionId: _selectedPromotionId,
     );
 
     if (!mounted) return;
     if (billing == null) {
+      if (_selectedPromotionId != null) {
+        final promotionProvider = context.read<PromotionProvider>();
+        await promotionProvider.fetchActivePromotions();
+        if (!mounted) return;
+        if (!promotionProvider.promotions.any(
+          (promotion) => promotion.id == _selectedPromotionId,
+        )) {
+          setState(() => _selectedPromotionId = null);
+        }
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(provider.error ?? 'Can not checkout. Please try again.')),
+        SnackBar(
+          content: Text(
+            provider.error ?? 'Can not checkout. Please try again.',
+          ),
+        ),
       );
       return;
     }
@@ -345,10 +424,19 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'd');
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: 'd',
+    );
     final dateFormatter = DateFormat('dd/MM/yyyy');
-    final subtotal = widget.items.fold<double>(0, (sum, item) => sum + item.lineTotal);
-    final totalQuantity = widget.items.fold<int>(0, (sum, item) => sum + item.quantity);
+    final subtotal = widget.items.fold<double>(
+      0,
+      (sum, item) => sum + item.lineTotal,
+    );
+    final totalQuantity = widget.items.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6FBFA),
@@ -358,11 +446,33 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
         iconTheme: const IconThemeData(color: Colors.black87),
         title: Text(
           'Checkout details',
-          style: GoogleFonts.poppins(color: Colors.black87, fontWeight: FontWeight.w700),
+          style: GoogleFonts.poppins(
+            color: Colors.black87,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       body: Consumer<CartProvider>(
         builder: (context, provider, child) {
+          final promotionProvider = context.watch<PromotionProvider>();
+          final serviceIds = widget.items
+              .map((item) => item.serviceId ?? item.service?.id ?? '')
+              .where((id) => id.isNotEmpty)
+              .toSet();
+          final availablePromotions = promotionProvider.promotions
+              .where((promotion) => promotion.appliesToAny(serviceIds))
+              .toList();
+          PromotionModel? selectedPromotion;
+          for (final promotion in availablePromotions) {
+            if (promotion.id == _selectedPromotionId) {
+              selectedPromotion = promotion;
+            }
+          }
+          final discount = selectedPromotion?.discountAmount(widget.items) ?? 0;
+          final estimatedTotal = (subtotal - discount)
+              .clamp(0, subtotal)
+              .toDouble();
+
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
@@ -373,22 +483,43 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
               ),
               const SizedBox(height: 12),
               ...widget.items.map(
-                (item) => _CheckoutItemTile(item: item, currencyFormatter: currencyFormatter),
+                (item) => _CheckoutItemTile(
+                  item: item,
+                  currencyFormatter: currencyFormatter,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _PromotionSection(
+                promotions: availablePromotions,
+                selectedPromotionId: _selectedPromotionId,
+                isLoading: promotionProvider.isLoading,
+                error: promotionProvider.error,
+                onSelected: (promotionId) =>
+                    setState(() => _selectedPromotionId = promotionId),
+                onRetry: promotionProvider.fetchActivePromotions,
               ),
               const SizedBox(height: 12),
               _StylistSection(
                 stylists: provider.stylists,
                 selectedStylistId: _selectedStylistId,
                 isLoading: provider.isLoading && provider.stylists.isEmpty,
-                onChanged: (value) => setState(() => _selectedStylistId = value),
+                onChanged: (value) =>
+                    setState(() => _selectedStylistId = value),
               ),
               const SizedBox(height: 12),
               _CheckoutSection(
                 dateLabel: dateFormatter.format(_bookingDate),
                 timeLabel: _bookingTime.format(context),
-                          noteController: _noteController,
+                noteController: _noteController,
                 onPickDate: _pickDate,
                 onPickTime: _pickTime,
+              ),
+              const SizedBox(height: 16),
+              _CheckoutTotals(
+                subtotal: currencyFormatter.format(subtotal),
+                discount: currencyFormatter.format(discount),
+                total: currencyFormatter.format(estimatedTotal),
+                promotionTitle: selectedPromotion?.title,
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -397,15 +528,23 @@ class _CheckoutSelectionScreenState extends State<CheckoutSelectionScreen> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.event_available_outlined),
-                label: Text('Confirm checkout', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                label: Text(
+                  'Confirm checkout',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00695C),
                   foregroundColor: Colors.white,
                   minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
               ),
             ],
@@ -421,7 +560,11 @@ class _CartHero extends StatelessWidget {
   final String subtotal;
   final bool isEmbedded;
 
-  const _CartHero({required this.itemCount, required this.subtotal, required this.isEmbedded});
+  const _CartHero({
+    required this.itemCount,
+    required this.subtotal,
+    required this.isEmbedded,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -444,31 +587,48 @@ class _CartHero extends StatelessWidget {
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.12)),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.12),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'My cart',
-                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             )
           else
             Text(
               'My cart',
-              style: GoogleFonts.poppins(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w700),
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           const SizedBox(height: 8),
           Text(
             'Pick a service for quick checkout, or combine several services before confirming your booking.',
-            style: GoogleFonts.openSans(color: Colors.white.withValues(alpha: 0.9), height: 1.4),
+            style: GoogleFonts.openSans(
+              color: Colors.white.withValues(alpha: 0.9),
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 18),
           Row(
             children: [
-              Expanded(child: _HeroStat(label: 'Items', value: '$itemCount')),
+              Expanded(
+                child: _HeroStat(label: 'Items', value: '$itemCount'),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _HeroStat(label: 'Subtotal', value: subtotal)),
+              Expanded(
+                child: _HeroStat(label: 'Subtotal', value: subtotal),
+              ),
             ],
           ),
         ],
@@ -494,9 +654,22 @@ class _HeroStat extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: GoogleFonts.openSans(color: Colors.white.withValues(alpha: 0.86), fontSize: 12)),
+          Text(
+            label,
+            style: GoogleFonts.openSans(
+              color: Colors.white.withValues(alpha: 0.86),
+              fontSize: 12,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(value, style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -535,9 +708,16 @@ class _CartItemTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: isSelected ? const Color(0xFF26A69A) : Colors.transparent, width: 1.4),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF26A69A) : Colors.transparent,
+            width: 1.4,
+          ),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
           ],
         ),
         child: Row(
@@ -553,11 +733,16 @@ class _CartItemTile extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: const Color(0xFF00695C)),
                 ),
-                child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
+                child: isSelected
+                    ? const Icon(Icons.check, color: Colors.white, size: 16)
+                    : null,
               ),
             ),
             const SizedBox(width: 12),
-            ClipRRect(borderRadius: BorderRadius.circular(18), child: _Thumb(imageUrl: service?.imageUrl)),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: _Thumb(imageUrl: service?.imageUrl),
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -567,17 +752,26 @@ class _CartItemTile extends StatelessWidget {
                     service?.name ?? 'Service',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${service?.durationMinutes ?? 0} mins',
-                    style: GoogleFonts.openSans(color: Colors.grey.shade600, fontSize: 12),
+                    style: GoogleFonts.openSans(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     currencyFormatter.format(service?.price ?? 0),
-                    style: GoogleFonts.poppins(color: const Color(0xFF00695C), fontWeight: FontWeight.w700),
+                    style: GoogleFonts.poppins(
+                      color: const Color(0xFF00695C),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -586,7 +780,12 @@ class _CartItemTile extends StatelessWidget {
                       SizedBox(
                         width: 40,
                         child: Center(
-                          child: Text(item.quantity.toString(), style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                          child: Text(
+                            item.quantity.toString(),
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
                       _SmallIconButton(icon: Icons.add, onPressed: onPlus),
@@ -601,16 +800,25 @@ class _CartItemTile extends StatelessWidget {
                 IconButton(
                   tooltip: 'Remove',
                   onPressed: onRemove,
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                  ),
                 ),
                 Text(
                   currencyFormatter.format(item.lineTotal),
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: Colors.black87),
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Book now',
-                  style: GoogleFonts.openSans(color: const Color(0xFF00695C), fontWeight: FontWeight.w700),
+                  style: GoogleFonts.openSans(
+                    color: const Color(0xFF00695C),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -625,7 +833,10 @@ class _CheckoutItemTile extends StatelessWidget {
   final CartItemModel item;
   final NumberFormat currencyFormatter;
 
-  const _CheckoutItemTile({required this.item, required this.currencyFormatter});
+  const _CheckoutItemTile({
+    required this.item,
+    required this.currencyFormatter,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -637,12 +848,19 @@ class _CheckoutItemTile extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Row(
         children: [
-          ClipRRect(borderRadius: BorderRadius.circular(18), child: _Thumb(imageUrl: service?.imageUrl)),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: _Thumb(imageUrl: service?.imageUrl),
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -650,7 +868,10 @@ class _CheckoutItemTile extends StatelessWidget {
               children: [
                 Text(
                   service?.name ?? 'Service',
-                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -662,7 +883,10 @@ class _CheckoutItemTile extends StatelessWidget {
           ),
           Text(
             currencyFormatter.format(item.lineTotal),
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: const Color(0xFF00695C)),
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF00695C),
+            ),
           ),
         ],
       ),
@@ -675,7 +899,11 @@ class _SelectionSummary extends StatelessWidget {
   final int selectedCount;
   final String subtotal;
 
-  const _SelectionSummary({required this.selectedServices, required this.selectedCount, required this.subtotal});
+  const _SelectionSummary({
+    required this.selectedServices,
+    required this.selectedCount,
+    required this.subtotal,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -685,7 +913,11 @@ class _SelectionSummary extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
@@ -693,16 +925,28 @@ class _SelectionSummary extends StatelessWidget {
         children: [
           Text(
             'Selected cart information',
-            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700),
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _SummaryStat(label: 'Services', value: '$selectedServices')),
+              Expanded(
+                child: _SummaryStat(
+                  label: 'Services',
+                  value: '$selectedServices',
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _SummaryStat(label: 'Quantity', value: '$selectedCount')),
+              Expanded(
+                child: _SummaryStat(label: 'Quantity', value: '$selectedCount'),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _SummaryStat(label: 'Subtotal', value: subtotal)),
+              Expanded(
+                child: _SummaryStat(label: 'Subtotal', value: subtotal),
+              ),
             ],
           ),
         ],
@@ -721,17 +965,29 @@ class _SummaryStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFFF7FAFA), borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7FAFA),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: GoogleFonts.openSans(color: Colors.grey.shade600, fontSize: 12)),
+          Text(
+            label,
+            style: GoogleFonts.openSans(
+              color: Colors.grey.shade600,
+              fontSize: 12,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: const Color(0xFF00695C)),
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF00695C),
+            ),
           ),
         ],
       ),
@@ -766,13 +1022,23 @@ class _BillingSection extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Billing status', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+          Text(
+            'Billing status',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             'Switch between unpaid and paid bills, then tap a bill to view its details.',
@@ -798,7 +1064,9 @@ class _BillingSection extends StatelessWidget {
           const SizedBox(height: 14),
           if (billings.isEmpty)
             Text(
-              selectedFilter == 'UNPAID' ? 'No unpaid bills yet.' : 'No paid bills yet.',
+              selectedFilter == 'UNPAID'
+                  ? 'No unpaid bills yet.'
+                  : 'No paid bills yet.',
               style: GoogleFonts.openSans(color: Colors.grey.shade600),
             )
           else
@@ -820,12 +1088,19 @@ class _FilterChip extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _FilterChip({required this.label, required this.isSelected, required this.onTap});
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ChoiceChip(
-      label: Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+      label: Text(
+        label,
+        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+      ),
       selected: isSelected,
       onSelected: (_) => onTap(),
       selectedColor: const Color(0xFF00695C),
@@ -844,7 +1119,11 @@ class _BillingTile extends StatelessWidget {
   final NumberFormat currencyFormatter;
   final VoidCallback onTap;
 
-  const _BillingTile({required this.billing, required this.currencyFormatter, required this.onTap});
+  const _BillingTile({
+    required this.billing,
+    required this.currencyFormatter,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -858,7 +1137,9 @@ class _BillingTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFFF9FCFB),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: isPaid ? const Color(0xFFCBEBDD) : const Color(0xFFF3DCA4)),
+          border: Border.all(
+            color: isPaid ? const Color(0xFFCBEBDD) : const Color(0xFFF3DCA4),
+          ),
         ),
         child: Row(
           children: [
@@ -866,12 +1147,16 @@ class _BillingTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: isPaid ? const Color(0xFFE3F6EE) : const Color(0xFFFFF3D8),
+                color: isPaid
+                    ? const Color(0xFFE3F6EE)
+                    : const Color(0xFFFFF3D8),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 isPaid ? Icons.check_circle_outline : Icons.pending_actions,
-                color: isPaid ? const Color(0xFF00695C) : const Color(0xFF9A6500),
+                color: isPaid
+                    ? const Color(0xFF00695C)
+                    : const Color(0xFF9A6500),
               ),
             ),
             const SizedBox(width: 12),
@@ -879,10 +1164,15 @@ class _BillingTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(billing.code, style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                  Text(
+                    billing.code,
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(height: 4),
                   Text(
-                    billing.status == 'PAID' ? 'Method: ${billing.paymentMethod}' : 'Payment: Staff will collect after service',
+                    billing.status == 'PAID'
+                        ? 'Method: ${billing.paymentMethod}'
+                        : 'Payment: Staff will collect after service',
                     style: GoogleFonts.openSans(color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 4),
@@ -937,6 +1227,273 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
+class _PromotionSection extends StatelessWidget {
+  final List<PromotionModel> promotions;
+  final String? selectedPromotionId;
+  final bool isLoading;
+  final String? error;
+  final ValueChanged<String?> onSelected;
+  final Future<bool> Function() onRetry;
+
+  const _PromotionSection({
+    required this.promotions,
+    required this.selectedPromotionId,
+    required this.isLoading,
+    required this.error,
+    required this.onSelected,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.local_offer_outlined, color: Color(0xFF00695C)),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  'Choose a promotion',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'You can apply one promotion to this booking.',
+            style: GoogleFonts.openSans(color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 14),
+          if (isLoading && promotions.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (error != null && promotions.isEmpty)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    error!,
+                    style: GoogleFonts.openSans(color: Colors.redAccent),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => onRetry(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            )
+          else ...[
+            _PromotionOption(
+              title: 'No promotion',
+              subtitle: 'Continue with the regular price',
+              isSelected: selectedPromotionId == null,
+              onTap: () => onSelected(null),
+            ),
+            if (promotions.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'No promotion applies to the selected services.',
+                  style: GoogleFonts.openSans(color: Colors.grey.shade600),
+                ),
+              )
+            else
+              ...promotions.map(
+                (promotion) => Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: _PromotionOption(
+                    title: promotion.title,
+                    subtitle: promotion.scope == PromotionModel.allServicesScope
+                        ? '${promotion.discountPercent}% off all selected services'
+                        : '${promotion.discountPercent}% off eligible services',
+                    isSelected: selectedPromotionId == promotion.id,
+                    onTap: () => onSelected(promotion.id),
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PromotionOption extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _PromotionOption({
+    required this.title,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE6F4F1) : const Color(0xFFF7FAFA),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF00695C) : Colors.grey.shade200,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: isSelected ? const Color(0xFF00695C) : Colors.grey,
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.openSans(
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CheckoutTotals extends StatelessWidget {
+  final String subtotal;
+  final String discount;
+  final String total;
+  final String? promotionTitle;
+
+  const _CheckoutTotals({
+    required this.subtotal,
+    required this.discount,
+    required this.total,
+    required this.promotionTitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        children: [
+          _AmountSummaryRow(label: 'Subtotal', value: subtotal),
+          const SizedBox(height: 9),
+          _AmountSummaryRow(
+            label: promotionTitle == null
+                ? 'Discount'
+                : 'Discount · $promotionTitle',
+            value: '-$discount',
+            valueColor: const Color(0xFFFF7043),
+          ),
+          const Divider(height: 26),
+          _AmountSummaryRow(
+            label: 'Estimated total',
+            value: total,
+            isStrong: true,
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'The final discount is confirmed by the server at checkout.',
+              style: GoogleFonts.openSans(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AmountSummaryRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool isStrong;
+
+  const _AmountSummaryRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.isStrong = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontWeight: isStrong ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            color: valueColor ?? const Color(0xFF00695C),
+            fontSize: isStrong ? 18 : 15,
+            fontWeight: isStrong ? FontWeight.w800 : FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StylistSection extends StatelessWidget {
   final List<StylistModel> stylists;
   final String? selectedStylistId;
@@ -958,21 +1515,39 @@ class _StylistSection extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Choose stylist', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+          Text(
+            'Choose stylist',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             'Choose the person who will handle this booking. You can set the date and time right below.',
-            style: GoogleFonts.openSans(color: Colors.grey.shade600, height: 1.4),
+            style: GoogleFonts.openSans(
+              color: Colors.grey.shade600,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 12),
           if (isLoading)
-            const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: CircularProgressIndicator(),
+              ),
+            )
           else if (stylists.isEmpty)
             Container(
               padding: const EdgeInsets.all(14),
@@ -992,7 +1567,10 @@ class _StylistSection extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'No active stylist is available right now. Please try another service or come back later.',
-                      style: GoogleFonts.openSans(color: const Color(0xFF9A6500), height: 1.4),
+                      style: GoogleFonts.openSans(
+                        color: const Color(0xFF9A6500),
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
@@ -1007,7 +1585,11 @@ class _StylistSection extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.badge_outlined, color: Color(0xFF00695C), size: 18),
+                  const Icon(
+                    Icons.badge_outlined,
+                    color: Color(0xFF00695C),
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -1029,7 +1611,10 @@ class _StylistSection extends StatelessWidget {
                 hintText: 'Select a stylist',
                 filled: true,
                 fillColor: const Color(0xFFF7FAFA),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
               ),
               items: stylists
                   .map(
@@ -1071,13 +1656,23 @@ class _CheckoutSection extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Booking information', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+          Text(
+            'Booking information',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             'Choose date, time, stylist, and any note before creating the booking.',
@@ -1086,9 +1681,21 @@ class _CheckoutSection extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(child: _PickerButton(icon: Icons.calendar_today, label: dateLabel, onPressed: onPickDate)),
+              Expanded(
+                child: _PickerButton(
+                  icon: Icons.calendar_today,
+                  label: dateLabel,
+                  onPressed: onPickDate,
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _PickerButton(icon: Icons.schedule, label: timeLabel, onPressed: onPickTime)),
+              Expanded(
+                child: _PickerButton(
+                  icon: Icons.schedule,
+                  label: timeLabel,
+                  onPressed: onPickTime,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1100,7 +1707,10 @@ class _CheckoutSection extends StatelessWidget {
               labelText: 'Note for the salon',
               filled: true,
               fillColor: const Color(0xFFF7FAFA),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
             ),
           ),
         ],
@@ -1114,14 +1724,22 @@ class _PickerButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
 
-  const _PickerButton({required this.icon, required this.label, required this.onPressed});
+  const _PickerButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
     return OutlinedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 18),
-      label: Text(label, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+      label: Text(
+        label,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+      ),
       style: OutlinedButton.styleFrom(
         foregroundColor: Colors.black87,
         minimumSize: const Size.fromHeight(50),
@@ -1142,10 +1760,22 @@ class _TotalRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: Text(label, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700))),
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
         Text(
           value,
-          style: GoogleFonts.poppins(color: const Color(0xFF00695C), fontSize: 18, fontWeight: FontWeight.w800),
+          style: GoogleFonts.poppins(
+            color: const Color(0xFF00695C),
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ],
     );
@@ -1169,7 +1799,9 @@ class _SmallIconButton extends StatelessWidget {
           padding: EdgeInsets.zero,
           backgroundColor: const Color(0xFFE6F4F1),
           foregroundColor: const Color(0xFF00695C),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
         child: Icon(icon, size: 16),
       ),
@@ -1224,7 +1856,11 @@ class _RequestErrorCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
@@ -1233,13 +1869,23 @@ class _RequestErrorCard extends StatelessWidget {
           Container(
             width: 72,
             height: 72,
-            decoration: const BoxDecoration(color: Color(0xFFFFF3E0), shape: BoxShape.circle),
-            child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFE65100), size: 36),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFF3E0),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFE65100),
+              size: 36,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
             'Can not load cart',
-            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700),
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -1250,9 +1896,14 @@ class _RequestErrorCard extends StatelessWidget {
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: onRetry,
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00695C)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF00695C),
+            ),
             icon: const Icon(Icons.refresh),
-            label: Text('Try again', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            label: Text(
+              'Try again',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -1271,7 +1922,11 @@ class _EmptyCart extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
@@ -1280,11 +1935,24 @@ class _EmptyCart extends StatelessWidget {
           Container(
             width: 72,
             height: 72,
-            decoration: const BoxDecoration(color: Color(0xFFE6F4F1), shape: BoxShape.circle),
-            child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF00695C), size: 36),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE6F4F1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.shopping_bag_outlined,
+              color: Color(0xFF00695C),
+              size: 36,
+            ),
           ),
           const SizedBox(height: 16),
-          Text('Your cart is empty', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+          Text(
+            'Your cart is empty',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
             'Add a service from the home catalog to start building your booking.',
@@ -1296,7 +1964,3 @@ class _EmptyCart extends StatelessWidget {
     );
   }
 }
-
-
-
-
