@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../store/data/models/booking_model.dart';
 import '../data/staff_api.dart';
+import '../data/staff_payment_response.dart';
 
 class StaffScheduleTab extends StatefulWidget {
   const StaffScheduleTab({super.key});
@@ -97,10 +98,19 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
   Future<void> _collectPayment(BookingModel booking, String paymentMethod) async {
     setState(() => _collectingBookingId = booking.id);
     try {
-      await _api.collectBookingPayment(bookingId: booking.id, paymentMethod: paymentMethod);
+      final response = await _api.collectBookingPayment(
+        bookingId: booking.id,
+        paymentMethod: paymentMethod,
+      );
       if (!mounted) return;
+
+      if (paymentMethod == 'BANK_TRANSFER' && response.payment != null && !response.isPaid) {
+        await _showTransferPaymentDialog(booking, response.payment!);
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Da ghi nhan thanh toan.')),
+        const SnackBar(content: Text('Da ghi nhan thanh toan tien mat.')),
       );
       await _refresh();
     } catch (error) {
@@ -111,6 +121,25 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
     } finally {
       if (mounted) setState(() => _collectingBookingId = null);
     }
+  }
+
+  Future<void> _showTransferPaymentDialog(BookingModel booking, StaffPaymentSession payment) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => _TransferPaymentDialog(
+        booking: booking,
+        payment: payment,
+        api: _api,
+        onPaymentConfirmed: () async {
+          if (!mounted) return;
+          Navigator.of(dialogContext).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Da xac nhan thanh toan chuyen khoan.')),
+          );
+          await _refresh();
+        },
+      ),
+    );
   }
 
   @override
@@ -164,7 +193,7 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
               ),
               const SizedBox(height: 18),
               if (snapshot.hasError)
-                _StateBox(message: 'Khong tai duoc lich lam viec.')
+                const _StateBox(message: 'Khong tai duoc lich lam viec.')
               else if (bookings.isEmpty)
                 _StateBox(
                   message: isToday ? 'Hom nay chua co lich hen.' : 'Ngay nay chua co lich hen.',
@@ -312,7 +341,11 @@ class _BookingDetailsSheet extends StatelessWidget {
             const SizedBox(height: 10),
             _DetailRow(icon: Icons.confirmation_number_outlined, label: 'Booking', value: booking.code),
             const SizedBox(height: 10),
-            _DetailRow(icon: Icons.payments_outlined, label: 'Total', value: currencyFormatter.format(booking.totalAmount)),
+            _DetailRow(
+              icon: Icons.payments_outlined,
+              label: 'Total',
+              value: currencyFormatter.format(booking.totalAmount),
+            ),
             const SizedBox(height: 18),
             Text('Services', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
@@ -350,9 +383,7 @@ class _PaymentMethodButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final methods = const [
       ('CASH', 'Tien mat', Icons.payments_outlined),
-      ('BANK_TRANSFER', 'Chuyen khoan', Icons.account_balance_outlined),
-      ('CARD', 'The', Icons.credit_card),
-      ('E_WALLET', 'Vi dien tu', Icons.account_balance_wallet_outlined),
+      ('BANK_TRANSFER', 'Chuyen khoan QR', Icons.account_balance_outlined),
     ];
 
     return Column(
@@ -372,6 +403,136 @@ class _PaymentMethodButtons extends StatelessWidget {
                 ),
               )
               .toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _TransferPaymentDialog extends StatefulWidget {
+  final BookingModel booking;
+  final StaffPaymentSession payment;
+  final StaffApi api;
+  final Future<void> Function() onPaymentConfirmed;
+
+  const _TransferPaymentDialog({
+    required this.booking,
+    required this.payment,
+    required this.api,
+    required this.onPaymentConfirmed,
+  });
+
+  @override
+  State<_TransferPaymentDialog> createState() => _TransferPaymentDialogState();
+}
+
+class _TransferPaymentDialogState extends State<_TransferPaymentDialog> {
+  bool _isConfirming = false;
+
+  Future<void> _confirmPayment() async {
+    setState(() => _isConfirming = true);
+    try {
+      await widget.api.confirmBookingTransferPayment(bookingId: widget.booking.id);
+      if (!mounted) return;
+      await widget.onPaymentConfirmed();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Khong xac nhan duoc thanh toan: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _isConfirming = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final payment = widget.payment;
+    final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'd');
+
+    return AlertDialog(
+      title: Text('Chuyen khoan QR ngan hang', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Dua ma QR nay cho khach quet bang app ngan hang, sau do staff xac nhan da nhan tien.',
+                style: GoogleFonts.openSans(color: Colors.grey.shade700),
+              ),
+              const SizedBox(height: 16),
+              if (payment.qrCode.isNotEmpty)
+                Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      payment.qrCode,
+                      width: 220,
+                      height: 220,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 220,
+                        height: 220,
+                        color: Colors.grey.shade100,
+                        alignment: Alignment.center,
+                        child: const Text('Khong tai duoc QR'),
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              _DetailRow(
+                icon: Icons.payments_outlined,
+                label: 'So tien',
+                value: currencyFormatter.format(payment.amount),
+              ),
+              const SizedBox(height: 10),
+              _DetailRow(
+                icon: Icons.account_balance_outlined,
+                label: 'Ngan hang',
+                value: payment.bankName.isEmpty ? payment.bankBin : payment.bankName,
+              ),
+              const SizedBox(height: 10),
+              _DetailRow(
+                icon: Icons.person_outline,
+                label: 'Chu TK',
+                value: payment.accountName.isEmpty ? '--' : payment.accountName,
+              ),
+              const SizedBox(height: 10),
+              _DetailRow(
+                icon: Icons.credit_card_outlined,
+                label: 'So TK',
+                value: payment.accountNumber.isEmpty ? '--' : payment.accountNumber,
+              ),
+              const SizedBox(height: 10),
+              _DetailRow(
+                icon: Icons.receipt_long_outlined,
+                label: 'Noi dung',
+                value: payment.transferContent.isEmpty ? '--' : payment.transferContent,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isConfirming ? null : () => Navigator.of(context).pop(),
+          child: const Text('Dong'),
+        ),
+        FilledButton.icon(
+          onPressed: _isConfirming ? null : _confirmPayment,
+          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00695C)),
+          icon: _isConfirming
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Icon(Icons.verified_outlined),
+          label: Text(_isConfirming ? 'Dang xac nhan' : 'Da nhan tien'),
         ),
       ],
     );
@@ -410,8 +571,12 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: const Color(0xFF00695C)),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(icon, size: 20, color: const Color(0xFF00695C)),
+        ),
         const SizedBox(width: 10),
         Text('$label: ', style: GoogleFonts.openSans(color: Colors.grey.shade600)),
         Expanded(child: Text(value, style: GoogleFonts.poppins(fontWeight: FontWeight.w600))),
@@ -474,4 +639,3 @@ String _formatTime(String? raw) {
   final match = RegExp(r'(\d{2}:\d{2})').firstMatch(raw);
   return match?.group(1) ?? raw;
 }
-
