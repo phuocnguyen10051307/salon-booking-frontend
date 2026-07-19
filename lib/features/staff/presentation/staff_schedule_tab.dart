@@ -134,7 +134,7 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
           if (!mounted) return;
           Navigator.of(dialogContext).pop();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Da xac nhan thanh toan chuyen khoan.')),
+            const SnackBar(content: Text('Da xac nhan da nhan tien chuyen khoan.')),
           );
           await _refresh();
         },
@@ -451,7 +451,7 @@ class _TransferPaymentDialogState extends State<_TransferPaymentDialog> {
     final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'd');
 
     return AlertDialog(
-      title: Text('Chuyen khoan QR ngan hang', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+      title: Text('Xac nhan nhan tien chuyen khoan', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
@@ -460,7 +460,7 @@ class _TransferPaymentDialogState extends State<_TransferPaymentDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Dua ma QR nay cho khach quet bang app ngan hang, sau do staff xac nhan da nhan tien.',
+                'Dua ma QR nay cho khach quet bang app ngan hang. Sau khi da kiem tra tien da vao tai khoan, staff bam xac nhan da nhan tien.',
                 style: GoogleFonts.openSans(color: Colors.grey.shade700),
               ),
               const SizedBox(height: 16),
@@ -532,7 +532,7 @@ class _TransferPaymentDialogState extends State<_TransferPaymentDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                 )
               : const Icon(Icons.verified_outlined),
-          label: Text(_isConfirming ? 'Dang xac nhan' : 'Da nhan tien'),
+          label: Text(_isConfirming ? 'Dang xac nhan' : 'Xac nhan da nhan tien'),
         ),
       ],
     );
@@ -639,3 +639,4 @@ String _formatTime(String? raw) {
   final match = RegExp(r'(\d{2}:\d{2})').firstMatch(raw);
   return match?.group(1) ?? raw;
 }
+
