@@ -68,7 +68,9 @@ class ChatSocketService {
     final socket = io.io(
       ApiConstants.socketBaseUrl,
       io.OptionBuilder()
-          .setTransports(['websocket'])
+          // Allow long-polling fallback on VPS/reverse proxies where direct
+          // websocket upgrades are not consistently available.
+          .setTransports(['websocket', 'polling'])
           .disableAutoConnect()
           .enableForceNew()
           .enableReconnection()
