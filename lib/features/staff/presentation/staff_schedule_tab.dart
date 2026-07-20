@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
 
 import '../../store/data/models/booking_model.dart';
 import '../data/staff_api.dart';
@@ -116,7 +117,7 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Khong ghi nhan duoc thanh toan: $error')),
+        SnackBar(content: Text('Khong ghi nhan duoc thanh toan: ${_readErrorMessage(error)}')),
       );
     } finally {
       if (mounted) setState(() => _collectingBookingId = null);
@@ -634,9 +635,25 @@ class _StateBox extends StatelessWidget {
   }
 }
 
+String _readErrorMessage(Object error) {
+  if (error is DioException) {
+    final data = error.response?.data;
+    if (data is Map) {
+      final message = data['message'] ?? data['error'];
+      if (message != null) return message.toString();
+    }
+    return error.message ?? 'Request failed';
+  }
+  return error.toString();
+}
+
 String _formatTime(String? raw) {
   if (raw == null || raw.isEmpty) return '--:--';
   final match = RegExp(r'(\d{2}:\d{2})').firstMatch(raw);
   return match?.group(1) ?? raw;
 }
+
+
+
+
 
