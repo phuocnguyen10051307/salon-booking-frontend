@@ -5,7 +5,6 @@
     <application
         android:label="salon_booking_"
         android:name="${applicationName}"
-        android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

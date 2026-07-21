@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../../../core/constants/api_constants.dart';
@@ -57,6 +58,43 @@ class ChatSocketService {
 
   bool get isConnected => _socket?.connected == true;
 
+  void _log(String event, [dynamic details]) {
+    final suffix = details == null ? '' : ' details=${_redact(details)}';
+    debugPrint('[ChatSocket] event=$event$suffix');
+  }
+
+  String _redact(dynamic details) {
+    if (details is Map) {
+      return details.entries
+          .map((entry) {
+            final key = entry.key.toString();
+            final normalizedKey = key.toLowerCase();
+            final value =
+                normalizedKey.contains('token') ||
+                    normalizedKey.contains('authorization')
+                ? '<redacted>'
+                : _redact(entry.value);
+            return '$key: $value';
+          })
+          .join(', ');
+    }
+    if (details is Iterable) return details.map(_redact).join(', ');
+
+    return details
+        .toString()
+        .replaceAll(
+          RegExp(r'Bearer\s+[A-Za-z0-9._~-]+', caseSensitive: false),
+          'Bearer <redacted>',
+        )
+        .replaceAllMapped(
+          RegExp(
+            r'(token|authorization)\s*[:=]\s*[^,\s}]+',
+            caseSensitive: false,
+          ),
+          (match) => '${match[1]}=<redacted>',
+        );
+  }
+
   void connect(String token) {
     if (_token == token && _socket != null) {
       if (_socket!.disconnected) _socket!.connect();
@@ -65,12 +103,13 @@ class ChatSocketService {
     disconnect();
     _token = token;
     _connectionController.add(ChatConnectionStatus.connecting);
+    final socketUrl = ApiConstants.socketBaseUrl;
+    _log('initializing', 'url=$socketUrl path=/socket.io namespace=/');
     final socket = io.io(
-      ApiConstants.socketBaseUrl,
+      socketUrl,
       io.OptionBuilder()
-          // Allow long-polling fallback on VPS/reverse proxies where direct
-          // websocket upgrades are not consistently available.
-          .setTransports(['websocket', 'polling'])
+          .setTransports(['websocket'])
+          .setPath('/socket.io')
           .disableAutoConnect()
           .enableForceNew()
           .enableReconnection()
@@ -82,15 +121,19 @@ class ChatSocketService {
     _socket = socket;
 
     socket.onConnect((_) {
+      _log('connect', 'socketId=${socket.id}');
       _connectionController.add(ChatConnectionStatus.connected);
     });
-    socket.onDisconnect((_) {
+    socket.onDisconnect((reason) {
+      _log('disconnect', reason);
       _connectionController.add(ChatConnectionStatus.disconnected);
     });
-    socket.onReconnectAttempt((_) {
+    socket.onReconnectAttempt((attempt) {
+      _log('reconnect_attempt', attempt);
       _connectionController.add(ChatConnectionStatus.reconnecting);
     });
     socket.onConnectError((error) {
+      _log('connect_error', error);
       final parsed = _parseError(error);
       if (const {
         'AUTH_REQUIRED',
@@ -103,6 +146,19 @@ class ChatSocketService {
         _connectionController.add(ChatConnectionStatus.disconnected);
       }
       _errorController.add(parsed);
+    });
+    socket.onError((error) {
+      _log('error', error);
+      _errorController.add(_parseError(error));
+    });
+    socket.onReconnectError((error) {
+      _log('reconnect_error', error);
+      _errorController.add(_parseError(error));
+    });
+    socket.onReconnectFailed((error) {
+      _log('reconnect_failed', error);
+      _connectionController.add(ChatConnectionStatus.disconnected);
+      _errorController.add(_parseError(error));
     });
     socket.on(
       'message:error',
@@ -132,6 +188,7 @@ class ChatSocketService {
       final data = _asMap(payload);
       _addTyping(data, data['isTyping'] == true);
     });
+    _log('connect_call');
     socket.connect();
   }
 
@@ -233,6 +290,7 @@ class ChatSocketService {
   void disconnect() {
     final socket = _socket;
     if (socket != null) {
+      _log('dispose_socket');
       socket.dispose();
     }
     _socket = null;

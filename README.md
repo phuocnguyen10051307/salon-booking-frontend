@@ -1,5 +1,21 @@
 # salon*booking*
 
+## Cấu hình URL production
+
+File `.env` chỉ được dùng làm fallback khi chạy debug/profile. Bản release bắt
+buộc truyền URL production bằng `--dart-define` và sẽ dừng ngay khi URL bị rỗng,
+dùng HTTP, localhost, `10.0.2.2`, IP LAN hoặc socket URL có thêm path.
+
+```powershell
+flutter build apk --release `
+  --dart-define=API_BASE_URL=https://RAILWAY_DOMAIN/v1 `
+  --dart-define=SOCKET_BASE_URL=https://RAILWAY_DOMAIN
+```
+
+`SOCKET_BASE_URL` chỉ chứa origin. Không thêm `/api`, `/v1`, `/socket.io` hoặc
+namespace. Ứng dụng tự kết nối path `/socket.io` bằng WebSocket và in URL đã
+resolve lúc khởi động mà không in token.
+
 Dự án Flutter cho quản lý đặt lịch salon.
 
 ## Cấu trúc dự án

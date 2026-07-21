@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
+import 'core/constants/api_constants.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/provider/auth_provider.dart';
 import 'features/chat/provider/chat_provider.dart';
@@ -14,6 +15,7 @@ import 'features/store/provider/promotion_provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
+  ApiConstants.validateAndLog();
 
   runApp(
     MultiProvider(
