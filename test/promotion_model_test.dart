@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salon_booking_frontend/features/store/data/cart_api.dart';
 import 'package:salon_booking_frontend/features/store/data/models/billing_model.dart';
+import 'package:salon_booking_frontend/features/store/data/models/booking_model.dart';
 import 'package:salon_booking_frontend/features/store/data/models/cart_item_model.dart';
 import 'package:salon_booking_frontend/features/store/data/models/promotion_model.dart';
 import 'package:salon_booking_frontend/features/store/data/models/service_model.dart';
+import 'package:salon_booking_frontend/features/staff/data/staff_payment_response.dart';
 
 void main() {
   group('PromotionModel parsing', () {
@@ -108,6 +110,37 @@ void main() {
 
       expect(payload.containsKey('promotion_id'), isFalse);
     });
+  });
+
+  test('BookingModel parses the billed total from nested billing data', () {
+    final booking = BookingModel.fromJson({
+      'booking_id': 'booking-1',
+      'booking_code': 'BK001',
+      'total_amount': '250',
+      'billings': {
+        'billing_id': 'billing-1',
+        'status': 'UNPAID',
+        'payment_method': 'BANK_TRANSFER',
+        'total_amount': '200',
+      },
+    });
+
+    expect(booking.totalAmount, 250);
+    expect(booking.billedTotalAmount, 200);
+    expect(booking.billingStatus, 'UNPAID');
+  });
+
+  test('StaffPaymentSession parses diagnostics for incomplete PayOS payloads', () {
+    final session = StaffPaymentSession.fromJson({
+      'status': 'PENDING',
+      'amount': 0,
+      'missingFields': ['checkoutUrl', 'qrCode'],
+      'diagnosticMessage': 'PayOS response is missing required fields: checkoutUrl, qrCode',
+    });
+
+    expect(session.isUsable, isFalse);
+    expect(session.missingFields, ['checkoutUrl', 'qrCode']);
+    expect(session.diagnosticMessage, contains('checkoutUrl'));
   });
 
   test('BillingModel parses the applied promotion', () {

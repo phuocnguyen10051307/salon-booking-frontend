@@ -1,9 +1,19 @@
-import 'package:intl/intl.dart';
+﻿import 'package:intl/intl.dart';
 
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../store/data/models/booking_model.dart';
 import 'staff_payment_response.dart';
+
+Map<String, dynamic> _extractPayload(dynamic data) {
+  if (data is Map && data['data'] is Map) {
+    return Map<String, dynamic>.from(data['data'] as Map);
+  }
+  if (data is Map) {
+    return Map<String, dynamic>.from(data);
+  }
+  return <String, dynamic>{};
+}
 
 class StaffApi {
   Future<List<BookingModel>> getBookingsForDate({DateTime? date}) async {
@@ -31,8 +41,7 @@ class StaffApi {
       '${ApiConstants.billing}/booking/$bookingId/pay',
       data: {'payment_method': paymentMethod},
     );
-    final payload = response.data['data'] ?? response.data;
-    return StaffPaymentResponse.fromJson(Map<String, dynamic>.from(payload as Map));
+    return StaffPaymentResponse.fromJson(_extractPayload(response.data));
   }
 
   Future<StaffPaymentResponse> confirmBookingTransferPayment({required String bookingId}) async {
@@ -40,7 +49,11 @@ class StaffApi {
       '${ApiConstants.billing}/booking/$bookingId/pay/confirm',
       data: {'payment_method': 'BANK_TRANSFER'},
     );
-    final payload = response.data['data'] ?? response.data;
-    return StaffPaymentResponse.fromJson(Map<String, dynamic>.from(payload as Map));
+    return StaffPaymentResponse.fromJson(_extractPayload(response.data));
+  }
+
+  Future<StaffPaymentResponse> getBookingPaymentStatus({required String bookingId}) async {
+    final response = await ApiClient.dio.get('${ApiConstants.billing}/booking/$bookingId/payment-status');
+    return StaffPaymentResponse.fromJson(_extractPayload(response.data));
   }
 }

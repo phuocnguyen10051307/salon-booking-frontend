@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:dio/dio.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../store/data/models/booking_model.dart';
 import '../data/staff_api.dart';
@@ -105,13 +109,39 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
       );
       if (!mounted) return;
 
-      if (paymentMethod == 'BANK_TRANSFER' && response.payment != null && !response.isPaid) {
-        await _showTransferPaymentDialog(booking, response.payment!);
+      if (paymentMethod == 'BANK_TRANSFER') {
+        final payment = response.payment;
+        if (payment == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('PayOS chua tra ve phien thanh toan. Vui long thu lai.')),
+          );
+          await _refresh();
+          return;
+        }
+
+        if (!payment.isUsable) {
+          final reason = payment.diagnosticMessage.trim().isNotEmpty
+              ? payment.diagnosticMessage
+              : 'PayOS tra ve phien thanh toan thieu du lieu QR/checkout URL.';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(reason)),
+          );
+          await _refresh();
+          return;
+        }
+
+        await _openTransferPaymentScreen(booking, payment);
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Da ghi nhan thanh toan tien mat.')),
+        SnackBar(
+          content: Text(
+            response.isPaid
+                ? 'Da ghi nhan thanh toan thanh cong.'
+                : 'Da tao phien thanh toan PayOS.',
+          ),
+        ),
       );
       await _refresh();
     } catch (error) {
@@ -124,21 +154,21 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
     }
   }
 
-  Future<void> _showTransferPaymentDialog(BookingModel booking, StaffPaymentSession payment) {
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) => _TransferPaymentDialog(
-        booking: booking,
-        payment: payment,
-        api: _api,
-        onPaymentConfirmed: () async {
-          if (!mounted) return;
-          Navigator.of(dialogContext).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Da xac nhan da nhan tien chuyen khoan.')),
-          );
-          await _refresh();
-        },
+  Future<void> _openTransferPaymentScreen(BookingModel booking, StaffPaymentSession? payment) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _TransferPaymentScreen(
+          booking: booking,
+          payment: payment,
+          api: _api,
+          onPaymentConfirmed: () async {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Da xac nhan thanh toan thanh cong.')),
+            );
+            await _refresh();
+          },
+        ),
       ),
     );
   }
@@ -345,7 +375,9 @@ class _BookingDetailsSheet extends StatelessWidget {
             _DetailRow(
               icon: Icons.payments_outlined,
               label: 'Total',
-              value: currencyFormatter.format(booking.totalAmount),
+              value: currencyFormatter.format(
+                booking.billedTotalAmount > 0 ? booking.billedTotalAmount : booking.totalAmount,
+              ),
             ),
             const SizedBox(height: 18),
             Text('Services', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
@@ -384,7 +416,7 @@ class _PaymentMethodButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final methods = const [
       ('CASH', 'Tien mat', Icons.payments_outlined),
-      ('BANK_TRANSFER', 'Chuyen khoan QR', Icons.account_balance_outlined),
+      ('BANK_TRANSFER', 'Thanh toan PayOS', Icons.qr_code_2_outlined),
     ];
 
     return Column(
@@ -410,13 +442,13 @@ class _PaymentMethodButtons extends StatelessWidget {
   }
 }
 
-class _TransferPaymentDialog extends StatefulWidget {
+class _TransferPaymentScreen extends StatefulWidget {
   final BookingModel booking;
-  final StaffPaymentSession payment;
+  final StaffPaymentSession? payment;
   final StaffApi api;
   final Future<void> Function() onPaymentConfirmed;
 
-  const _TransferPaymentDialog({
+  const _TransferPaymentScreen({
     required this.booking,
     required this.payment,
     required this.api,
@@ -424,118 +456,471 @@ class _TransferPaymentDialog extends StatefulWidget {
   });
 
   @override
-  State<_TransferPaymentDialog> createState() => _TransferPaymentDialogState();
+  State<_TransferPaymentScreen> createState() => _TransferPaymentScreenState();
 }
 
-class _TransferPaymentDialogState extends State<_TransferPaymentDialog> {
+class _TransferPaymentScreenState extends State<_TransferPaymentScreen> {
+  static const Duration _pollInterval = Duration(seconds: 5);
+
+  Timer? _pollTimer;
+  StaffPaymentSession? _payment;
   bool _isConfirming = false;
+  bool _isCheckingStatus = false;
+  bool _isOpeningCheckout = false;
+  bool _hasHandledPaid = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _payment = widget.payment;
+    _startPolling();
+    unawaited(_loadInitialPayment());
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadInitialPayment() async {
+    if (_payment != null) return;
+    try {
+      final response = await widget.api.getBookingPaymentStatus(bookingId: widget.booking.id);
+      if (!mounted) return;
+      if (response.payment != null) {
+        setState(() {
+          _payment = _payment == null
+              ? response.payment!
+              : _mergePaymentSession(_payment!, response.payment!);
+        });
+      }
+    } catch (_) {
+      // keep fallback view
+    }
+  }
+
+  StaffPaymentSession _mergePaymentSession(
+    StaffPaymentSession current,
+    StaffPaymentSession incoming,
+  ) {
+    String pick(String next, String previous) => next.trim().isNotEmpty ? next : previous;
+
+    return StaffPaymentSession(
+      provider: pick(incoming.provider, current.provider),
+      bankBin: pick(incoming.bankBin, current.bankBin),
+      bankName: pick(incoming.bankName, current.bankName),
+      qrCode: pick(incoming.qrCode, current.qrCode),
+      accountName: pick(incoming.accountName, current.accountName),
+      accountNumber: pick(incoming.accountNumber, current.accountNumber),
+      amount: incoming.amount > 0 ? incoming.amount : current.amount,
+      transferContent: pick(incoming.transferContent, current.transferContent),
+      checkoutUrl: pick(incoming.checkoutUrl, current.checkoutUrl),
+      orderCode: pick(incoming.orderCode, current.orderCode),
+      paymentLinkId: pick(incoming.paymentLinkId, current.paymentLinkId),
+      status: pick(incoming.status, current.status),
+    );
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    unawaited(_checkPaymentStatus());
+    _pollTimer = Timer.periodic(_pollInterval, (_) {
+      unawaited(_checkPaymentStatus());
+    });
+  }
+
+  Future<void> _handlePaid() async {
+    if (_hasHandledPaid) return;
+    _hasHandledPaid = true;
+    _pollTimer?.cancel();
+    await widget.onPaymentConfirmed();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _checkPaymentStatus({bool showFeedback = false}) async {
+    if (_isCheckingStatus || _hasHandledPaid) return;
+    setState(() => _isCheckingStatus = true);
+    try {
+      final response = await widget.api.getBookingPaymentStatus(bookingId: widget.booking.id);
+      if (!mounted) return;
+
+      if (response.payment != null) {
+        setState(() {
+          _payment = _payment == null
+              ? response.payment!
+              : _mergePaymentSession(_payment!, response.payment!);
+        });
+      }
+
+      if (response.isPaid) {
+        await _handlePaid();
+        return;
+      }
+
+      if (showFeedback) {
+        final payment = _payment;
+        final reason = payment != null && !payment.isUsable
+            ? (payment.diagnosticMessage.trim().isNotEmpty
+                ? payment.diagnosticMessage
+                : 'PayOS tra ve phien thanh toan thieu du lieu QR/checkout URL.')
+            : 'Chua thay thanh toan thanh cong. Trang thai hien tai: ${_payment?.status ?? 'PENDING'}.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(reason)),
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      if (showFeedback) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Khong kiem tra duoc trang thai: ${_readErrorMessage(error)}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCheckingStatus = false);
+    }
+  }
 
   Future<void> _confirmPayment() async {
     setState(() => _isConfirming = true);
     try {
       await widget.api.confirmBookingTransferPayment(bookingId: widget.booking.id);
       if (!mounted) return;
-      await widget.onPaymentConfirmed();
+      await _handlePaid();
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Khong xac nhan duoc thanh toan: $error')),
+        SnackBar(content: Text('Khong xac nhan duoc thanh toan: ${_readErrorMessage(error)}')),
       );
     } finally {
       if (mounted) setState(() => _isConfirming = false);
     }
   }
 
+  Future<void> _openCheckout() async {
+    final payment = _payment;
+    if (payment == null || !payment.isUsable) {
+      final reason = payment?.diagnosticMessage.trim().isNotEmpty == true
+          ? payment!.diagnosticMessage
+          : 'Phien thanh toan PayOS chua day du du lieu de mo.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(reason)),
+      );
+      return;
+    }
+
+    final checkoutUrl = payment.checkoutUrl.trim();
+    if (checkoutUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Khong co duong dan thanh toan PayOS.')),
+      );
+      return;
+    }
+
+    final uri = Uri.tryParse(checkoutUrl);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Duong dan thanh toan khong hop le.')),
+      );
+      return;
+    }
+
+    setState(() => _isOpeningCheckout = true);
+    try {
+      var opened = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      if (!opened) {
+        opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Khong mo duoc trang thanh toan PayOS.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isOpeningCheckout = false);
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    final payment = widget.payment;
+    final payment = _payment;
     final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'd');
+    final isBusy = _isConfirming || _hasHandledPaid;
 
-    return AlertDialog(
-      title: Text('Xac nhan nhan tien chuyen khoan', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-      content: SizedBox(
-        width: 420,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Dua ma QR nay cho khach quet bang app ngan hang. Sau khi da kiem tra tien da vao tai khoan, staff bam xac nhan da nhan tien.',
-                style: GoogleFonts.openSans(color: Colors.grey.shade700),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F7F5),
+      appBar: AppBar(
+        title: const Text('Thanh toan PayOS'),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF16312B),
+        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: _isOpeningCheckout ? null : _openCheckout,
+            icon: _isOpeningCheckout
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.open_in_new),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F2E27),
+                borderRadius: BorderRadius.circular(20),
               ),
-              const SizedBox(height: 16),
-              if (payment.qrCode.isNotEmpty)
-                Center(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.network(
-                      payment.qrCode,
-                      width: 220,
-                      height: 220,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 220,
-                        height: 220,
-                        color: Colors.grey.shade100,
-                        alignment: Alignment.center,
-                        child: const Text('Khong tai duoc QR'),
-                      ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.booking.customerName ?? 'Customer',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _TopChip(
+                        icon: Icons.payments_outlined,
+                        label: currencyFormatter.format(payment?.amount ?? 0),
+                      ),
+                      _TopChip(
+                        icon: Icons.verified_outlined,
+                        label: (_payment?.status ?? 'PENDING'),
+                      ),
+                      _TopChip(
+                        icon: Icons.qr_code_2_outlined,
+                        label: (_payment?.orderCode ?? '').isEmpty ? '--' : _payment!.orderCode,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
-              const SizedBox(height: 16),
-              _DetailRow(
-                icon: Icons.payments_outlined,
-                label: 'So tien',
-                value: currencyFormatter.format(payment.amount),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: _FallbackQrView(
+                          payment: payment,
+                          isOpeningCheckout: _isOpeningCheckout,
+                          onOpenCheckout: _openCheckout,
+                        ),
+                ),
               ),
-              const SizedBox(height: 10),
-              _DetailRow(
-                icon: Icons.account_balance_outlined,
-                label: 'Ngan hang',
-                value: payment.bankName.isEmpty ? payment.bankBin : payment.bankName,
+            ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isCheckingStatus ? null : () => _checkPaymentStatus(showFeedback: true),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      icon: _isCheckingStatus
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.sync),
+                      label: const Text('Kiem tra lai'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: isBusy || ((_payment?.status ?? '').toUpperCase() != 'PAID') ? null : _confirmPayment,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF00695C),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      icon: _isConfirming
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.verified_outlined),
+                      label: Text(_isConfirming ? 'Dang xac nhan' : 'Xac nhan khi PayOS bao da thu'),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              _DetailRow(
-                icon: Icons.person_outline,
-                label: 'Chu TK',
-                value: payment.accountName.isEmpty ? '--' : payment.accountName,
-              ),
-              const SizedBox(height: 10),
-              _DetailRow(
-                icon: Icons.credit_card_outlined,
-                label: 'So TK',
-                value: payment.accountNumber.isEmpty ? '--' : payment.accountNumber,
-              ),
-              const SizedBox(height: 10),
-              _DetailRow(
-                icon: Icons.receipt_long_outlined,
-                label: 'Noi dung',
-                value: payment.transferContent.isEmpty ? '--' : payment.transferContent,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isConfirming ? null : () => Navigator.of(context).pop(),
-          child: const Text('Dong'),
-        ),
-        FilledButton.icon(
-          onPressed: _isConfirming ? null : _confirmPayment,
-          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00695C)),
-          icon: _isConfirming
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                )
-              : const Icon(Icons.verified_outlined),
-          label: Text(_isConfirming ? 'Dang xac nhan' : 'Xac nhan da nhan tien'),
-        ),
-      ],
+    );
+  }
+}
+
+class _FallbackQrView extends StatelessWidget {
+  final StaffPaymentSession? payment;
+  final bool isOpeningCheckout;
+  final Future<void> Function() onOpenCheckout;
+
+  const _FallbackQrView({
+    required this.payment,
+    required this.isOpeningCheckout,
+    required this.onOpenCheckout,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        children: [
+          Text(
+            'Mo PayOS bang trinh duyet de thanh toan tren dien thoai, hoac dung QR du phong ben duoi.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.openSans(color: Colors.grey.shade700),
+          ),
+          if ((payment?.diagnosticMessage ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF4E5),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFFFD8A8)),
+              ),
+              child: Text(
+                payment!.diagnosticMessage,
+                style: GoogleFonts.openSans(
+                  color: const Color(0xFF8A4B00),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: isOpeningCheckout ? null : onOpenCheckout,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF00695C),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              icon: isOpeningCheckout
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.open_in_new),
+              label: Text(isOpeningCheckout ? 'Dang mo PayOS' : 'Mo PayOS de thanh toan'),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FBFA),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: (payment?.qrCode ?? '').isEmpty
+                ? SizedBox(
+                    width: 240,
+                    height: 240,
+                    child: Center(
+                      child: Text(
+                        (payment?.diagnosticMessage ?? '').trim().isNotEmpty
+                            ? payment!.diagnosticMessage
+                            : 'Khong co ma QR PayOS',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                : QrImageView(
+                    data: payment?.qrCode ?? '',
+                    size: 240,
+                    backgroundColor: Colors.white,
+                  ),
+          ),
+          const SizedBox(height: 16),
+          _DetailRow(
+            icon: Icons.account_balance_outlined,
+            label: 'Ngan hang',
+            value: (payment?.bankName ?? '').isEmpty ? (payment?.bankBin ?? '--') : payment!.bankName,
+          ),
+          const SizedBox(height: 10),
+          _DetailRow(
+            icon: Icons.person_outline,
+            label: 'Chu TK',
+            value: (payment?.accountName ?? '').isEmpty ? '--' : payment!.accountName,
+          ),
+          const SizedBox(height: 10),
+          _DetailRow(
+            icon: Icons.credit_card_outlined,
+            label: 'So TK',
+            value: (payment?.accountNumber ?? '').isEmpty ? '--' : payment!.accountNumber,
+          ),
+          const SizedBox(height: 10),
+          _DetailRow(
+            icon: Icons.receipt_long_outlined,
+            label: 'Noi dung',
+            value: (payment?.transferContent ?? '').isEmpty ? '--' : payment!.transferContent,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _TopChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withOpacity(0.15)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.white),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -652,8 +1037,5 @@ String _formatTime(String? raw) {
   final match = RegExp(r'(\d{2}:\d{2})').firstMatch(raw);
   return match?.group(1) ?? raw;
 }
-
-
-
 
 

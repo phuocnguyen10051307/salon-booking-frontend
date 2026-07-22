@@ -16,6 +16,7 @@ class BookingModel {
   final String? billingId;
   final String? billingStatus;
   final String? paymentMethod;
+  final double billedTotalAmount;
 
   const BookingModel({
     required this.id,
@@ -32,6 +33,7 @@ class BookingModel {
     this.billingId,
     this.billingStatus,
     this.paymentMethod,
+    this.billedTotalAmount = 0,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -69,6 +71,9 @@ class BookingModel {
       billingId: billing is Map ? billing['billing_id']?.toString() : null,
       billingStatus: billing is Map ? billing['status']?.toString() : null,
       paymentMethod: billing is Map ? billing['payment_method']?.toString() : null,
+      billedTotalAmount: billing is Map
+          ? double.tryParse(billing['total_amount']?.toString() ?? '0') ?? 0
+          : 0,
     );
   }
 }

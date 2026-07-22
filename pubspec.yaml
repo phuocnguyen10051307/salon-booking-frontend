@@ -1,4 +1,4 @@
-name: salon_booking_frontend
+﻿name: salon_booking_frontend
 description: "A new Flutter project."
 publish_to: "none"
 version: 1.0.0+1
@@ -22,6 +22,8 @@ dependencies:
   url_launcher: ^6.3.1
   geolocator: ^14.0.3
   socket_io_client: 3.1.6
+  qr_flutter: ^4.1.0
+  webview_flutter: ^4.10.0
 
 dev_dependencies:
   flutter_test:

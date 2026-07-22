@@ -9,6 +9,12 @@ class StaffPaymentSession {
   final String accountNumber;
   final double amount;
   final String transferContent;
+  final String checkoutUrl;
+  final String orderCode;
+  final String paymentLinkId;
+  final String status;
+  final List<String> missingFields;
+  final String diagnosticMessage;
 
   const StaffPaymentSession({
     required this.provider,
@@ -19,11 +25,17 @@ class StaffPaymentSession {
     required this.accountNumber,
     required this.amount,
     required this.transferContent,
+    required this.checkoutUrl,
+    required this.orderCode,
+    required this.paymentLinkId,
+    required this.status,
+    this.missingFields = const [],
+    this.diagnosticMessage = '',
   });
 
   factory StaffPaymentSession.fromJson(Map<String, dynamic> json) {
     return StaffPaymentSession(
-      provider: json['provider']?.toString() ?? 'BANK_QR',
+      provider: json['provider']?.toString() ?? 'PAYOS',
       bankBin: json['bankBin']?.toString() ?? '',
       bankName: json['bankName']?.toString() ?? '',
       qrCode: json['qrCode']?.toString() ?? '',
@@ -31,8 +43,20 @@ class StaffPaymentSession {
       accountNumber: json['accountNumber']?.toString() ?? '',
       amount: double.tryParse(json['amount']?.toString() ?? '0') ?? 0,
       transferContent: json['transferContent']?.toString() ?? '',
+      checkoutUrl: json['checkoutUrl']?.toString() ?? '',
+      orderCode: json['orderCode']?.toString() ?? '',
+      paymentLinkId: json['paymentLinkId']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'PENDING',
+      missingFields: json['missingFields'] is List
+          ? (json['missingFields'] as List).map((item) => item.toString()).toList()
+          : const [],
+      diagnosticMessage: json['diagnosticMessage']?.toString() ?? '',
     );
   }
+
+  bool get hasQrCode => qrCode.trim().isNotEmpty;
+  bool get hasCheckoutUrl => checkoutUrl.trim().isNotEmpty;
+  bool get isUsable => hasQrCode || hasCheckoutUrl;
 }
 
 class StaffPaymentResponse {
@@ -46,9 +70,10 @@ class StaffPaymentResponse {
   factory StaffPaymentResponse.fromJson(Map<String, dynamic> json) {
     final billingJson = json['billing'];
     final paymentJson = json['payment'];
+    final billingSource = billingJson is Map ? billingJson : json;
 
     return StaffPaymentResponse(
-      billing: BillingModel.fromJson(Map<String, dynamic>.from(billingJson as Map)),
+      billing: BillingModel.fromJson(Map<String, dynamic>.from(billingSource as Map)),
       payment: paymentJson is Map
           ? StaffPaymentSession.fromJson(Map<String, dynamic>.from(paymentJson))
           : null,
