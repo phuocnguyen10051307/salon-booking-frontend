@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../store/data/models/booking_model.dart';
 import '../data/staff_api.dart';
@@ -82,6 +82,13 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
   }
 
   Future<void> _openBookingDetails(BookingModel booking) async {
+    final hasPendingTransfer =
+        booking.billingStatus != 'PAID' && booking.paymentMethod == 'BANK_TRANSFER';
+    if (hasPendingTransfer) {
+      await _openTransferPaymentScreen(booking, null);
+      return;
+    }
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -119,16 +126,6 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
           return;
         }
 
-        if (!payment.isUsable) {
-          final reason = payment.diagnosticMessage.trim().isNotEmpty
-              ? payment.diagnosticMessage
-              : 'PayOS tra ve phien thanh toan thieu du lieu QR/checkout URL.';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(reason)),
-          );
-          await _refresh();
-          return;
-        }
 
         await _openTransferPaymentScreen(booking, payment);
         return;
@@ -165,6 +162,13 @@ class _StaffScheduleTabState extends State<StaffScheduleTab> {
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Da xac nhan thanh toan thanh cong.')),
+            );
+            await _refresh();
+          },
+          onPaymentCancelled: () async {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Da huy phien thanh toan PayOS.')),
             );
             await _refresh();
           },
@@ -447,12 +451,14 @@ class _TransferPaymentScreen extends StatefulWidget {
   final StaffPaymentSession? payment;
   final StaffApi api;
   final Future<void> Function() onPaymentConfirmed;
+  final Future<void> Function() onPaymentCancelled;
 
   const _TransferPaymentScreen({
     required this.booking,
     required this.payment,
     required this.api,
     required this.onPaymentConfirmed,
+    required this.onPaymentCancelled,
   });
 
   @override
@@ -464,7 +470,7 @@ class _TransferPaymentScreenState extends State<_TransferPaymentScreen> {
 
   Timer? _pollTimer;
   StaffPaymentSession? _payment;
-  bool _isConfirming = false;
+  bool _isCancelling = false;
   bool _isCheckingStatus = false;
   bool _isOpeningCheckout = false;
   bool _hasHandledPaid = false;
@@ -563,7 +569,7 @@ class _TransferPaymentScreenState extends State<_TransferPaymentScreen> {
         final reason = payment != null && !payment.isUsable
             ? (payment.diagnosticMessage.trim().isNotEmpty
                 ? payment.diagnosticMessage
-                : 'PayOS tra ve phien thanh toan thieu du lieu QR/checkout URL.')
+                : 'PayOS tra ve phien thanh toan thieu du lieu can thiet.')
             : 'Chua thay thanh toan thanh cong. Trang thai hien tai: ${_payment?.status ?? 'PENDING'}.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(reason)),
@@ -581,19 +587,22 @@ class _TransferPaymentScreenState extends State<_TransferPaymentScreen> {
     }
   }
 
-  Future<void> _confirmPayment() async {
-    setState(() => _isConfirming = true);
+  Future<void> _cancelPayment() async {
+    if (_isCancelling || _hasHandledPaid) return;
+    setState(() => _isCancelling = true);
     try {
-      await widget.api.confirmBookingTransferPayment(bookingId: widget.booking.id);
+      await widget.api.cancelBookingTransferPayment(bookingId: widget.booking.id);
       if (!mounted) return;
-      await _handlePaid();
+      _pollTimer?.cancel();
+      await widget.onPaymentCancelled();
+      if (mounted) Navigator.of(context).pop();
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Khong xac nhan duoc thanh toan: ${_readErrorMessage(error)}')),
+        SnackBar(content: Text('Khong huy duoc thanh toan: ')),
       );
     } finally {
-      if (mounted) setState(() => _isConfirming = false);
+      if (mounted) setState(() => _isCancelling = false);
     }
   }
 
@@ -602,7 +611,7 @@ class _TransferPaymentScreenState extends State<_TransferPaymentScreen> {
     if (payment == null || !payment.isUsable) {
       final reason = payment?.diagnosticMessage.trim().isNotEmpty == true
           ? payment!.diagnosticMessage
-          : 'Phien thanh toan PayOS chua day du du lieu de mo.';
+          : 'Phien thanh toan PayOS chua du du lieu de mo.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(reason)),
       );
@@ -627,26 +636,21 @@ class _TransferPaymentScreenState extends State<_TransferPaymentScreen> {
 
     setState(() => _isOpeningCheckout = true);
     try {
-      var opened = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-      if (!opened) {
-        opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-      if (!opened && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Khong mo duoc trang thanh toan PayOS.')),
-        );
-      }
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => _PayosCheckoutWebViewScreen(url: uri.toString()),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isOpeningCheckout = false);
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final payment = _payment;
     final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'd');
-    final isBusy = _isConfirming || _hasHandledPaid;
+    final isBusy = _isCancelling || _hasHandledPaid;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F5),
@@ -701,7 +705,7 @@ class _TransferPaymentScreenState extends State<_TransferPaymentScreen> {
                       ),
                       _TopChip(
                         icon: Icons.verified_outlined,
-                        label: (_payment?.status ?? 'PENDING'),
+                        label: _payment?.status ?? 'PENDING',
                       ),
                       _TopChip(
                         icon: Icons.qr_code_2_outlined,
@@ -723,52 +727,33 @@ class _TransferPaymentScreenState extends State<_TransferPaymentScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: _FallbackQrView(
-                          payment: payment,
-                          isOpeningCheckout: _isOpeningCheckout,
-                          onOpenCheckout: _openCheckout,
-                        ),
+                    payment: payment,
+                    isOpeningCheckout: _isOpeningCheckout,
+                    onOpenCheckout: _openCheckout,
+                  ),
                 ),
               ),
             ),
             Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _isCheckingStatus ? null : () => _checkPaymentStatus(showFeedback: true),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      icon: _isCheckingStatus
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.sync),
-                      label: const Text('Kiem tra lai'),
-                    ),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: isBusy ? null : _cancelPayment,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: isBusy || ((_payment?.status ?? '').toUpperCase() != 'PAID') ? null : _confirmPayment,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF00695C),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      icon: _isConfirming
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.verified_outlined),
-                      label: Text(_isConfirming ? 'Dang xac nhan' : 'Xac nhan khi PayOS bao da thu'),
-                    ),
-                  ),
-                ],
+                  icon: _isCancelling
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.close_rounded),
+                  label: const Text('Huy thanh toan'),
+                ),
               ),
             ),
           ],
@@ -846,24 +831,7 @@ class _FallbackQrView extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Colors.grey.shade200),
             ),
-            child: (payment?.qrCode ?? '').isEmpty
-                ? SizedBox(
-                    width: 240,
-                    height: 240,
-                    child: Center(
-                      child: Text(
-                        (payment?.diagnosticMessage ?? '').trim().isNotEmpty
-                            ? payment!.diagnosticMessage
-                            : 'Khong co ma QR PayOS',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  )
-                : QrImageView(
-                    data: payment?.qrCode ?? '',
-                    size: 240,
-                    backgroundColor: Colors.white,
-                  ),
+            child: _buildPaymentQrView(payment),
           ),
           const SizedBox(height: 16),
           _DetailRow(
@@ -895,6 +863,71 @@ class _FallbackQrView extends StatelessWidget {
   }
 }
 
+Widget _buildPaymentQrView(StaffPaymentSession? payment) {
+  final qrCode = payment?.qrCode.trim() ?? '';
+  final checkoutUrl = payment?.checkoutUrl.trim() ?? '';
+  final qrData = qrCode.isNotEmpty ? qrCode : checkoutUrl;
+
+  if (qrData.isNotEmpty) {
+    return QrImageView(
+      data: qrData,
+      size: 240,
+      backgroundColor: Colors.white,
+    );
+  }
+
+  return SizedBox(
+    width: 240,
+    height: 240,
+    child: Center(
+      child: Text(
+        (payment?.diagnosticMessage ?? '').trim().isNotEmpty
+            ? payment!.diagnosticMessage
+            : 'Khong co ma QR PayOS',
+        textAlign: TextAlign.center,
+      ),
+    ),
+  );
+}
+
+class _PayosCheckoutWebViewScreen extends StatefulWidget {
+  final String url;
+
+  const _PayosCheckoutWebViewScreen({required this.url});
+
+  @override
+  State<_PayosCheckoutWebViewScreen> createState() => _PayosCheckoutWebViewScreenState();
+}
+
+class _PayosCheckoutWebViewScreenState extends State<_PayosCheckoutWebViewScreen> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (request) => NavigationDecision.navigate,
+        ),
+      )
+      ..loadRequest(Uri.parse(widget.url));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('PayOS'),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF16312B),
+        elevation: 0,
+      ),
+      body: WebViewWidget(controller: _controller),
+    );
+  }
+}
 class _TopChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1027,7 +1060,7 @@ String _readErrorMessage(Object error) {
       final message = data['message'] ?? data['error'];
       if (message != null) return message.toString();
     }
-    return error.message ?? 'Request failed';
+    return error.message ?? 'Khong the thuc hien yeu cau';
   }
   return error.toString();
 }
@@ -1037,5 +1070,7 @@ String _formatTime(String? raw) {
   final match = RegExp(r'(\d{2}:\d{2})').firstMatch(raw);
   return match?.group(1) ?? raw;
 }
+
+
 
 

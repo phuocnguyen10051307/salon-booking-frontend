@@ -1,7 +1,8 @@
-﻿import 'package:intl/intl.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
+import '../../store/data/models/billing_model.dart';
 import '../../store/data/models/booking_model.dart';
 import 'staff_payment_response.dart';
 
@@ -50,6 +51,13 @@ class StaffApi {
       data: {'payment_method': 'BANK_TRANSFER'},
     );
     return StaffPaymentResponse.fromJson(_extractPayload(response.data));
+  }
+
+  Future<BillingModel> cancelBookingTransferPayment({required String bookingId}) async {
+    final response = await ApiClient.dio.delete('${ApiConstants.billing}/booking/$bookingId/pay');
+    final payload = _extractPayload(response.data);
+    final billing = payload['billing'] ?? response.data['billing'] ?? payload;
+    return BillingModel.fromJson(Map<String, dynamic>.from(billing as Map));
   }
 
   Future<StaffPaymentResponse> getBookingPaymentStatus({required String bookingId}) async {
